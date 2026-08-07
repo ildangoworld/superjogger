@@ -22,8 +22,8 @@ export type NextDirectionSuggestion = {
 };
 
 /**
- * Rule-based next-direction copy for Phase 3 home.
- * AI analysis suggestions replace/augment this in Phase 4.
+ * Rule-based next-direction copy for home.
+ * Active COMPLETED analysis suggestions take priority in getHomeDashboard.
  */
 export function suggestNextDirection(
   input: NextDirectionInput,

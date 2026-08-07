@@ -1,7 +1,14 @@
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  markActiveAnalysisStale,
+  runWorkoutAnalysis,
+} from "@/features/analysis/run-analysis";
+import { hasCoreAnalysisFieldsChanged } from "@/features/analysis/stale";
+import { getRemainingAnalysisSlots } from "@/features/analysis/usage";
 import {
   durationPartsToSeconds,
   kilometersToMeters,
@@ -14,7 +21,7 @@ import {
 } from "@/features/workouts/service";
 import { formatLocalDate } from "@/lib/dates/week";
 import { isFutureLocalDate, zonedLocalToUtcIso } from "@/lib/dates/zoned";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 export type WorkoutActionResult = {
   ok: boolean;
@@ -196,7 +203,40 @@ export async function createWorkout(
   revalidatePath("/");
   revalidatePath("/record");
 
-  redirect(`/workouts/${created.id}?saved=1${similar ? "&similar=1" : ""}`);
+  const remaining = await getRemainingAnalysisSlots(
+    supabase,
+    user.id,
+    formatLocalDate(timezone),
+  );
+
+  if (remaining > 0) {
+    const workoutId = created.id;
+    const userId = user.id;
+    const userTimezone = timezone;
+    after(async () => {
+      try {
+        const admin = createServiceRoleClient();
+        await runWorkoutAnalysis({
+          supabase: admin,
+          userId,
+          workoutId,
+          timezone: userTimezone,
+          triggerType: "AUTO",
+          requestKey: `auto:${workoutId}`,
+        });
+        revalidatePath(`/workouts/${workoutId}`);
+        revalidatePath("/workouts");
+        revalidatePath("/");
+      } catch {
+        // Analysis must never undo a successful workout save.
+      }
+    });
+  }
+
+  const analysisQuery = remaining > 0 ? "" : "&analysis=limit";
+  redirect(
+    `/workouts/${created.id}?saved=1${similar ? "&similar=1" : ""}${analysisQuery}`,
+  );
 }
 
 export async function updateWorkout(
@@ -226,7 +266,9 @@ export async function updateWorkout(
 
   const { data: existing, error: existingError } = await supabase
     .from("workouts")
-    .select("id, local_date, created_at")
+    .select(
+      "id, local_date, created_at, category, duration_seconds, distance_meters, perceived_exertion, condition_score, has_pain, pain_area, pain_details, average_heart_rate, active_analysis_id",
+    )
     .eq("id", workoutId)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -300,6 +342,37 @@ export async function updateWorkout(
 
   if (updateError) {
     return { ok: false, message: updateError.message };
+  }
+
+  const coreChanged = hasCoreAnalysisFieldsChanged(
+    {
+      category: existing.category,
+      localDate: existing.local_date,
+      durationSeconds: existing.duration_seconds,
+      distanceMeters: existing.distance_meters,
+      perceivedExertion: existing.perceived_exertion,
+      conditionScore: existing.condition_score,
+      hasPain: existing.has_pain,
+      painArea: existing.pain_area,
+      painDetails: existing.pain_details,
+      averageHeartRate: existing.average_heart_rate,
+    },
+    {
+      category: input.category,
+      localDate: input.localDate,
+      durationSeconds,
+      distanceMeters,
+      perceivedExertion: input.perceivedExertion,
+      conditionScore: input.conditionScore,
+      hasPain: input.hasPain,
+      painArea: input.hasPain ? (input.painArea ?? null) : null,
+      painDetails: input.hasPain ? (input.painDetails ?? null) : null,
+      averageHeartRate: input.averageHeartRate ?? null,
+    },
+  );
+
+  if (coreChanged && existing.active_analysis_id) {
+    await markActiveAnalysisStale(supabase, user.id, workoutId);
   }
 
   try {

@@ -35,6 +35,7 @@ export type HomeDashboard = {
     id: string;
     localDate: string;
     category: "RUNNING" | "WALKING" | "MIXED";
+    analysisSummary: string | null;
   } | null;
   grade: JoggerGradeResult;
   gradeLabel: string;
@@ -178,7 +179,7 @@ export async function getHomeDashboard(
     supabase
       .from("workouts")
       .select(
-        "id, local_date, category, has_pain, perceived_exertion, condition_score",
+        "id, local_date, category, has_pain, perceived_exertion, condition_score, active_analysis_id",
       )
       .eq("user_id", userId)
       .order("started_at", { ascending: false })
@@ -200,7 +201,24 @@ export async function getHomeDashboard(
       }
     : null;
 
-  const nextDirection = suggestNextDirection({
+  let analysisSummary: string | null = null;
+  let analysisSuggestion: string | null = null;
+
+  if (latestWorkout?.active_analysis_id) {
+    const { data: analysis } = await supabase
+      .from("workout_analyses")
+      .select("status, summary, next_workout_suggestion")
+      .eq("id", latestWorkout.active_analysis_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (analysis?.status === "COMPLETED" || analysis?.status === "STALE") {
+      analysisSummary = analysis.summary;
+      analysisSuggestion = analysis.next_workout_suggestion;
+    }
+  }
+
+  const ruleBasedDirection = suggestNextDirection({
     recommendationDetail: profile.recommendation_detail,
     lastWorkout: latestWorkout
       ? {
@@ -212,6 +230,13 @@ export async function getHomeDashboard(
       : null,
   });
 
+  const nextDirection: NextDirectionSuggestion = analysisSuggestion
+    ? {
+        headline: "AI 다음 운동 제안",
+        body: analysisSuggestion,
+      }
+    : ruleBasedDirection;
+
   return {
     nickname: profile.nickname,
     timezone,
@@ -222,6 +247,7 @@ export async function getHomeDashboard(
           id: latestWorkout.id,
           localDate: latestWorkout.local_date,
           category: latestWorkout.category,
+          analysisSummary,
         }
       : null,
     grade,

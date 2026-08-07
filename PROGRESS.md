@@ -13,7 +13,7 @@
 | 1 | 인증과 프로필 | 완료 |
 | 2 | 운동 기록 핵심 | 완료 |
 | 3 | 주간 목표와 홈 | 완료 |
-| 4 | AI 분석 | 미착수 |
+| 4 | AI 분석 | 완료 |
 | 5 | 크루 | 미착수 |
 | 6 | 품질 점검과 배포 | 미착수 |
 
@@ -49,7 +49,6 @@
 - 단위 테스트: `src/features/workouts/qualification.test.ts`
 - 마이그레이션: `supabase/migrations/20260807010000_phase2_workouts.sql`
   - `workouts`, `weekly_summaries` + RLS
-- AI 분석은 미연결(상세에 “분석 전” 안내)
 
 ## Phase 3 — 주간 목표와 홈
 
@@ -59,13 +58,23 @@
 - 단위 테스트: `src/features/goals/grade.test.ts`
 - 추가 마이그레이션 없음(기존 테이블 활용)
 
-## 다음에 할 일 (Phase 4)
+## Phase 4 — AI 분석
 
-- 서버 전용 AI 호출 + 구조화 JSON 검증
-- 하루 총 3회 원자적 분석 한도
-- 저장 직후 자동 분석 / `다시 분석하기`
-- 분석 컨텍스트(최근 5개, 4주 요약, 추세)
-- 안전 안내·실패 처리, `STALE` 상태
+- 서버 전용 OpenAI 호환 Chat Completions + Zod 구조화 JSON 검증
+- 하루 총 3회 원자적 슬롯(`reserve_ai_analysis_slot` RPC)
+- 저장 직후 `after()` 자동 분석 / `다시 분석하기`
+- 컨텍스트: 최근 5개, 최근 4주 요약, 통증·목표·직전 추세
+- 핵심 필드 수정 시 `STALE`, 실패 시 기존 활성 분석 유지
+- 단위 테스트: `src/features/analysis/schema.test.ts`
+- 마이그레이션: `supabase/migrations/20260807030000_phase4_ai_analysis.sql`
+  - `workout_analyses`, `ai_analysis_usage`, `user_trend_state` + RLS/RPC
+
+## 다음에 할 일 (Phase 5)
+
+- 크루 생성·가입·탈퇴·내보내기
+- 다대다 멤버십
+- 공개용 주간 집계(보안 함수/뷰)
+- 목표 달성 / 진행 중 / 시작 전 정렬
 
 ## 로컬 확인
 
@@ -75,8 +84,8 @@ npm test
 npm run lint
 ```
 
-Supabase SQL Editor에서 Phase 1·2 마이그레이션을 순서대로 적용한다.  
-환경변수는 `.env.example`을 참고해 `.env.local`에 설정한다.
+Supabase SQL Editor에서 Phase 1·2·4 마이그레이션을 순서대로 적용한다.  
+환경변수는 `.env.example`을 참고해 `.env.local`에 설정한다 (`AI_API_KEY`, `AI_MODEL` 필요).
 
 ## 문서 갱신 규칙
 

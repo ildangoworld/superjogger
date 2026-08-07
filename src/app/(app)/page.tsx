@@ -90,8 +90,8 @@ export default async function HomePage() {
               {formatCategory(latestWorkout.category)} · {latestWorkout.localDate}
             </p>
             <p className="text-muted mt-2 text-sm leading-6">
-              AI 상세 분석은 곧 연결돼요. 지금은 기록과 목표 진행을 먼저 확인해
-              보세요.
+              {latestWorkout.analysisSummary ??
+                "저장한 기록의 상세 분석은 기록 화면에서 확인할 수 있어요."}
             </p>
             <Link
               href={`/workouts/${latestWorkout.id}`}

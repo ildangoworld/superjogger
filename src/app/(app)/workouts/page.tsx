@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { analysisStatusLabel } from "@/features/analysis/format";
+import { getRemainingAnalysisSlots } from "@/features/analysis/usage";
+import type { AnalysisStatus } from "@/features/analysis/types";
 import {
   formatCategory,
   formatDistanceKm,
   formatDuration,
   goalStatusLabel,
 } from "@/features/workouts/format";
+import { formatLocalDate } from "@/lib/dates/week";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "기록" };
@@ -26,10 +30,22 @@ export default async function WorkoutsPage({
     redirect("/login");
   }
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("timezone")
+    .eq("id", user.id)
+    .maybeSingle();
+  const timezone = profile?.timezone ?? "Asia/Seoul";
+  const remainingSlots = await getRemainingAnalysisSlots(
+    supabase,
+    user.id,
+    formatLocalDate(timezone),
+  );
+
   const { data: workouts, error } = await supabase
     .from("workouts")
     .select(
-      "id, category, local_date, started_at, duration_seconds, distance_meters, qualifies_by_rule, counts_for_daily_goal",
+      "id, category, local_date, started_at, duration_seconds, distance_meters, qualifies_by_rule, counts_for_daily_goal, active_analysis_id",
     )
     .eq("user_id", user.id)
     .order("started_at", { ascending: false });
@@ -40,6 +56,23 @@ export default async function WorkoutsPage({
         기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
       </p>
     );
+  }
+
+  const analysisIds = (workouts ?? [])
+    .map((workout) => workout.active_analysis_id)
+    .filter((id): id is string => Boolean(id));
+
+  const statusByAnalysisId = new Map<string, AnalysisStatus>();
+  if (analysisIds.length > 0) {
+    const { data: analyses } = await supabase
+      .from("workout_analyses")
+      .select("id, status")
+      .eq("user_id", user.id)
+      .in("id", analysisIds);
+
+    for (const row of analyses ?? []) {
+      statusByAnalysisId.set(row.id, row.status);
+    }
   }
 
   return (
@@ -103,6 +136,17 @@ export default async function WorkoutsPage({
                     qualifiesByRule: workout.qualifies_by_rule,
                     countsForDailyGoal: workout.counts_for_daily_goal,
                   })}
+                  {" · "}
+                  {analysisStatusLabel(
+                    workout.active_analysis_id
+                      ? (statusByAnalysisId.get(workout.active_analysis_id) ??
+                          null)
+                      : null,
+                    {
+                      limitExceeded:
+                        !workout.active_analysis_id && remainingSlots <= 0,
+                    },
+                  )}
                 </p>
               </Link>
             </li>

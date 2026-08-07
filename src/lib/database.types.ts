@@ -264,9 +264,148 @@ export type Database = {
         };
         Relationships: [];
       };
+      workout_analyses: {
+        Row: {
+          id: string;
+          workout_id: string;
+          user_id: string;
+          status: "PENDING" | "COMPLETED" | "FAILED" | "STALE";
+          trigger_type: "AUTO" | "REANALYZE";
+          summary: string | null;
+          intensity_interpretation: string | null;
+          trend: string | null;
+          next_workout_suggestion: string | null;
+          safety_notice: string | null;
+          trend_summary: string | null;
+          risk_level: "NONE" | "CAUTION" | "HIGH" | null;
+          model_name: string | null;
+          prompt_version: string;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workout_id: string;
+          user_id: string;
+          status: "PENDING" | "COMPLETED" | "FAILED" | "STALE";
+          trigger_type: "AUTO" | "REANALYZE";
+          summary?: string | null;
+          intensity_interpretation?: string | null;
+          trend?: string | null;
+          next_workout_suggestion?: string | null;
+          safety_notice?: string | null;
+          trend_summary?: string | null;
+          risk_level?: "NONE" | "CAUTION" | "HIGH" | null;
+          model_name?: string | null;
+          prompt_version: string;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          workout_id?: string;
+          user_id?: string;
+          status?: "PENDING" | "COMPLETED" | "FAILED" | "STALE";
+          trigger_type?: "AUTO" | "REANALYZE";
+          summary?: string | null;
+          intensity_interpretation?: string | null;
+          trend?: string | null;
+          next_workout_suggestion?: string | null;
+          safety_notice?: string | null;
+          trend_summary?: string | null;
+          risk_level?: "NONE" | "CAUTION" | "HIGH" | null;
+          model_name?: string | null;
+          prompt_version?: string;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      ai_analysis_usage: {
+        Row: {
+          id: string;
+          user_id: string;
+          usage_local_date: string;
+          workout_id: string;
+          analysis_id: string | null;
+          trigger_type: "AUTO" | "REANALYZE";
+          status: "RESERVED" | "CONSUMED" | "RELEASED";
+          request_key: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          usage_local_date: string;
+          workout_id: string;
+          analysis_id?: string | null;
+          trigger_type: "AUTO" | "REANALYZE";
+          status: "RESERVED" | "CONSUMED" | "RELEASED";
+          request_key: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          usage_local_date?: string;
+          workout_id?: string;
+          analysis_id?: string | null;
+          trigger_type?: "AUTO" | "REANALYZE";
+          status?: "RESERVED" | "CONSUMED" | "RELEASED";
+          request_key?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      user_trend_state: {
+        Row: {
+          user_id: string;
+          latest_trend_summary: string | null;
+          source_analysis_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          latest_trend_summary?: string | null;
+          source_analysis_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          latest_trend_summary?: string | null;
+          source_analysis_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      reserve_ai_analysis_slot: {
+        Args: {
+          p_user_id: string;
+          p_workout_id: string;
+          p_usage_local_date: string;
+          p_trigger_type: string;
+          p_request_key: string;
+          p_prompt_version: string;
+        };
+        Returns: Json;
+      };
+      finalize_ai_analysis_usage: {
+        Args: {
+          p_usage_id: string;
+          p_status: string;
+        };
+        Returns: Json;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { AnalysisPanel } from "@/features/analysis/components/analysis-panel";
+import { getRemainingAnalysisSlots } from "@/features/analysis/usage";
 import { DeleteWorkoutButton } from "@/features/workouts/components/delete-workout-button";
 import {
   formatCategory,
@@ -9,6 +11,7 @@ import {
   formatLocalDateTimeLabel,
   goalStatusLabel,
 } from "@/features/workouts/format";
+import { formatLocalDate } from "@/lib/dates/week";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "운동 상세" };
@@ -18,7 +21,12 @@ export default async function WorkoutDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string; updated?: string; similar?: string }>;
+  searchParams: Promise<{
+    saved?: string;
+    updated?: string;
+    similar?: string;
+    analysis?: string;
+  }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -50,6 +58,30 @@ export default async function WorkoutDetailPage({
   }
 
   const timezone = profile?.timezone ?? "Asia/Seoul";
+  const todayLocal = formatLocalDate(timezone);
+
+  const [{ data: analysis }, remainingSlots] = await Promise.all([
+    workout.active_analysis_id
+      ? supabase
+          .from("workout_analyses")
+          .select(
+            "status, summary, intensity_interpretation, trend, next_workout_suggestion, safety_notice, risk_level",
+          )
+          .eq("id", workout.active_analysis_id)
+          .eq("user_id", user.id)
+          .maybeSingle()
+      : supabase
+          .from("workout_analyses")
+          .select(
+            "status, summary, intensity_interpretation, trend, next_workout_suggestion, safety_notice, risk_level",
+          )
+          .eq("workout_id", workout.id)
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+    getRemainingAnalysisSlots(supabase, user.id, todayLocal),
+  ]);
 
   return (
     <div className="pt-6 pb-8">
@@ -168,13 +200,26 @@ export default async function WorkoutDetailPage({
             </dd>
           </div>
         ) : null}
-        <div>
-          <dt className="text-muted">AI 분석</dt>
-          <dd className="text-muted mt-1">
-            아직 분석 전이에요. AI 분석은 다음 단계에서 연결돼요.
-          </dd>
-        </div>
       </dl>
+
+      <AnalysisPanel
+        workoutId={workout.id}
+        remainingSlots={remainingSlots}
+        limitExceededOnSave={query.analysis === "limit"}
+        analysis={
+          analysis
+            ? {
+                status: analysis.status,
+                summary: analysis.summary,
+                intensityInterpretation: analysis.intensity_interpretation,
+                trend: analysis.trend,
+                nextWorkoutSuggestion: analysis.next_workout_suggestion,
+                safetyNotice: analysis.safety_notice,
+                riskLevel: analysis.risk_level,
+              }
+            : null
+        }
+      />
 
       <div className="mt-10 flex flex-col gap-3">
         <Link
