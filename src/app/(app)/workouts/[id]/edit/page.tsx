@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import {
-  buildEditValues,
-  WorkoutForm,
-} from "@/features/workouts/components/workout-form";
+import { WorkoutForm } from "@/features/workouts/components/workout-form";
+import { buildEditValues } from "@/features/workouts/components/workout-form-values";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "기록 수정" };

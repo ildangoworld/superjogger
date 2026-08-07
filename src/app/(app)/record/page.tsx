@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import {
-  buildDefaultCreateValues,
-  WorkoutForm,
-} from "@/features/workouts/components/workout-form";
+import { WorkoutForm } from "@/features/workouts/components/workout-form";
+import { buildDefaultCreateValues } from "@/features/workouts/components/workout-form-values";
 import { formatLocalDate } from "@/lib/dates/week";
 import { createClient } from "@/lib/supabase/server";
 
