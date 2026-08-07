@@ -52,7 +52,7 @@ export function SignupForm() {
           disabled={pending}
           className="bg-pine-800 text-fog-50 hover:bg-pine-700 h-12 rounded-lg text-base font-semibold transition-colors disabled:opacity-60"
         >
-          {pending ? "가입 중…" : "회원가입"}
+          {pending ? "가입 중" : "회원가입"}
         </button>
       </form>
 

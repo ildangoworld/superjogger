@@ -42,7 +42,7 @@ export function ResetPasswordForm() {
         disabled={pending}
         className="bg-pine-800 text-fog-50 hover:bg-pine-700 h-12 rounded-lg text-base font-semibold transition-colors disabled:opacity-60"
       >
-        {pending ? "저장 중…" : "비밀번호 변경"}
+        {pending ? "저장 중" : "비밀번호 변경"}
       </button>
     </form>
   );

@@ -82,7 +82,7 @@ export function ProfileSettingsForm({
             disabled={pending}
             className="bg-pine-800 text-fog-50 hover:bg-pine-700 h-12 rounded-lg font-semibold disabled:opacity-60"
           >
-            {pending ? "저장 중…" : "저장하기"}
+            {pending ? "저장 중" : "저장하기"}
           </button>
         </form>
       </section>
@@ -95,7 +95,7 @@ export function ProfileSettingsForm({
           onClick={() => startSignOut(() => signOut())}
           className="border-line text-pine-800 h-12 rounded-lg border font-medium"
         >
-          {signingOut ? "로그아웃 중…" : "로그아웃"}
+          {signingOut ? "로그아웃 중" : "로그아웃"}
         </button>
         <button
           type="button"
@@ -116,7 +116,7 @@ export function ProfileSettingsForm({
           }}
           className="text-dawn-900 h-12 rounded-lg font-medium underline-offset-4 hover:underline"
         >
-          {deleting ? "탈퇴 처리 중…" : "회원 탈퇴"}
+          {deleting ? "탈퇴 처리 중" : "회원 탈퇴"}
         </button>
         <AuthMessage result={deleteState} />
       </section>

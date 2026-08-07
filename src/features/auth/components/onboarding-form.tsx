@@ -368,7 +368,7 @@ export function OnboardingForm({ initialNickname }: Props) {
               disabled={pending}
               className="bg-pine-800 text-fog-50 hover:bg-pine-700 h-12 w-full rounded-lg font-semibold disabled:opacity-60"
             >
-              {pending ? "저장 중…" : "목표 확정하고 시작하기"}
+              {pending ? "저장 중" : "목표 확정하고 시작하기"}
             </button>
           </form>
         )}

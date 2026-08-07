@@ -237,35 +237,82 @@ export async function completeOnboarding(
 
   const weekStart = getWeekStartDate(parsed.data.timezone);
 
-  const { error: profileError } = await supabase
+  const { data: existingProfile, error: existingProfileError } = await supabase
     .from("profiles")
-    .update({
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existingProfileError) {
+    return { ok: false, message: existingProfileError.message };
+  }
+
+  if (!existingProfile) {
+    const { error: insertProfileError } = await supabase.from("profiles").insert({
+      id: user.id,
       nickname: parsed.data.nickname,
       timezone: parsed.data.timezone,
       recommendation_detail: parsed.data.recommendationDetail,
       onboarding_completed: true,
-    })
-    .eq("id", user.id);
+    });
 
-  if (profileError) {
-    if (profileError.code === "23505") {
-      return { ok: false, message: "이미 사용 중인 닉네임이에요." };
+    if (insertProfileError) {
+      if (insertProfileError.code === "23505") {
+        return { ok: false, message: "이미 사용 중인 닉네임이에요." };
+      }
+      return { ok: false, message: insertProfileError.message };
     }
-    return { ok: false, message: profileError.message };
-  }
 
-  const { error: prefsError } = await supabase
-    .from("user_preferences")
-    .update({
-      experience_level: parsed.data.experienceLevel,
-      primary_goal: parsed.data.primaryGoal,
-      available_weekdays: parsed.data.availableWeekdays,
-      baseline_weekly_frequency: parsed.data.baselineWeeklyFrequency,
-    })
-    .eq("user_id", user.id);
+    const { error: insertPrefsError } = await supabase
+      .from("user_preferences")
+      .upsert(
+        {
+          user_id: user.id,
+          experience_level: parsed.data.experienceLevel,
+          primary_goal: parsed.data.primaryGoal,
+          available_weekdays: parsed.data.availableWeekdays,
+          baseline_weekly_frequency: parsed.data.baselineWeeklyFrequency,
+        },
+        { onConflict: "user_id" },
+      );
 
-  if (prefsError) {
-    return { ok: false, message: prefsError.message };
+    if (insertPrefsError) {
+      return { ok: false, message: insertPrefsError.message };
+    }
+  } else {
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({
+        nickname: parsed.data.nickname,
+        timezone: parsed.data.timezone,
+        recommendation_detail: parsed.data.recommendationDetail,
+        onboarding_completed: true,
+      })
+      .eq("id", user.id);
+
+    if (profileError) {
+      if (profileError.code === "23505") {
+        return { ok: false, message: "이미 사용 중인 닉네임이에요." };
+      }
+      return { ok: false, message: profileError.message };
+    }
+
+    const { error: prefsError } = await supabase
+      .from("user_preferences")
+      .upsert(
+        {
+          user_id: user.id,
+          experience_level: parsed.data.experienceLevel,
+          primary_goal: parsed.data.primaryGoal,
+          available_weekdays: parsed.data.availableWeekdays,
+          baseline_weekly_frequency: parsed.data.baselineWeeklyFrequency,
+        },
+        { onConflict: "user_id" },
+      );
+
+    if (prefsError) {
+      return { ok: false, message: prefsError.message };
+    }
   }
 
   const { error: goalError } = await supabase.from("weekly_goals").upsert(

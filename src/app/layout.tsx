@@ -1,16 +1,20 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, IBM_Plex_Sans_KR } from "next/font/google";
+import { Noto_Sans_KR, Outfit } from "next/font/google";
 import "./globals.css";
 
-const display = Bricolage_Grotesque({
-  subsets: ["latin"],
-  variable: "--font-display",
-});
-
-const body = IBM_Plex_Sans_KR({
+const body = Noto_Sans_KR({
   weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
   variable: "--font-body",
+  display: "swap",
+});
+
+/** Latin-only brand face for the English wordmark. Not used for Korean UI. */
+const brand = Outfit({
+  weight: ["600", "700"],
+  subsets: ["latin"],
+  variable: "--font-brand",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -26,9 +30,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="ko"
-      className={`${display.variable} ${body.variable} h-full antialiased`}
+      className={`${body.variable} ${brand.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>
   );
 }

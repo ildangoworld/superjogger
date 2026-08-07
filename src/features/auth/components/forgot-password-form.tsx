@@ -35,7 +35,7 @@ export function ForgotPasswordForm() {
           disabled={pending}
           className="bg-pine-800 text-fog-50 hover:bg-pine-700 h-12 rounded-lg text-base font-semibold transition-colors disabled:opacity-60"
         >
-          {pending ? "보내는 중…" : "재설정 링크 보내기"}
+          {pending ? "보내는 중" : "재설정 링크 보내기"}
         </button>
       </form>
       <Link href="/login" className="text-pine-700 text-sm underline-offset-4 hover:underline">

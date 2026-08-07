@@ -76,7 +76,7 @@ export default function WelcomePage() {
         </section>
 
         <section id="principles" className="pb-24">
-          <h2 className="font-display text-fog-500 text-sm font-semibold tracking-[0.2em] uppercase">
+          <h2 className="text-fog-500 text-sm font-semibold tracking-[0.2em] uppercase">
             Principles
           </h2>
           <ul className="mt-8 flex flex-col gap-10">

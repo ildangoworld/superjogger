@@ -20,6 +20,8 @@
 ## 알려진 이슈 / 수정
 
 - **Google 로그인 세션 유실 (2026-08-07 수정)**: 서버 액션 OAuth로 PKCE 쿠키가 브라우저에 남지 않던 문제를, 브라우저 클라이언트 OAuth + 콜백에서 리다이렉트 응답에 세션 쿠키를 명시적으로 설정하는 방식으로 수정.
+- **온보딩 profiles permission denied (2026-08-07 수정)**: `authenticated` 역할에 테이블 GRANT가 없어 발생. `20260807020000_fix_table_grants.sql`로 권한·insert 정책을 보강하고, 프로필 행이 없을 때 upsert하도록 온보딩을 수정.
+- **한글 폰트 깨짐 (2026-08-07 수정)**: 라틴 전용 Bricolage를 한글 UI에 쓰던 문제와 `--font-display` 순환 참조를 수정. UI는 Noto Sans KR, 영문 워드마크만 Outfit.
 
 ## Phase 0 — 프로젝트 기반
 

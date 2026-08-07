@@ -40,7 +40,7 @@ export function LoginForm() {
           disabled={pending}
           className="bg-pine-800 text-fog-50 hover:bg-pine-700 h-12 rounded-lg text-base font-semibold transition-colors disabled:opacity-60"
         >
-          {pending ? "로그인 중…" : "로그인"}
+          {pending ? "로그인 중" : "로그인"}
         </button>
       </form>
 

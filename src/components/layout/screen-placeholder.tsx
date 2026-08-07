@@ -9,7 +9,7 @@ export function ScreenPlaceholder({
 }) {
   return (
     <section className="animate-rise flex flex-col pt-10">
-      <h1 className="font-display text-pine-900 text-2xl font-semibold">
+      <h1 className="text-pine-900 text-2xl font-semibold">
         {title}
       </h1>
       <p className="text-muted mt-3 max-w-sm leading-7">{description}</p>

@@ -64,7 +64,7 @@ export function NextWeekGoalForm({
           className="bg-pine-800 text-fog-50 hover:bg-pine-700 h-12 rounded-lg font-semibold disabled:opacity-60"
         >
           {pending
-            ? "저장 중…"
+            ? "저장 중"
             : confirmedCount
               ? "다음 주 목표 수정"
               : "다음 주 목표 확정"}

@@ -31,7 +31,7 @@ export function DeleteWorkoutButton({ workoutId }: { workoutId: string }) {
         disabled={pending}
         className="text-dawn-900 h-11 text-sm font-medium underline-offset-4 hover:underline disabled:opacity-60"
       >
-        {pending ? "삭제 중…" : "기록 삭제"}
+        {pending ? "삭제 중" : "기록 삭제"}
       </button>
       {state.message ? (
         <p className="text-dawn-900 text-sm">{state.message}</p>

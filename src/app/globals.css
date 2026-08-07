@@ -51,10 +51,12 @@
   --color-muted: var(--color-fog-600);
   --color-line: var(--color-fog-200);
 
-  /* 타이포그래피 */
+  /* UI: Noto Sans KR (--font-body). 영문 워드마크만 Outfit (--font-brand). */
   --font-sans:
     var(--font-body), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  --font-display: var(--font-display), var(--font-body), sans-serif;
+  --font-display: var(--font-sans);
+  --font-brand-face:
+    var(--font-brand), var(--font-body), "Apple SD Gothic Neo", sans-serif;
 
   /* 모션 — 급하지 않은 이징 */
   --ease-calm: cubic-bezier(0.22, 1, 0.36, 1);
@@ -88,6 +90,12 @@ body {
   background-color: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.font-brand {
+  font-family: var(--font-brand-face);
 }
 
 @layer components {

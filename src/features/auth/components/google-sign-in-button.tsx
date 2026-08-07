@@ -41,7 +41,7 @@ export function GoogleSignInButton({
         disabled={pending}
         className="border-line text-pine-800 hover:bg-fog-100 flex h-12 w-full items-center justify-center rounded-lg border text-base font-medium transition-colors disabled:opacity-60"
       >
-        {pending ? "Google로 이동 중…" : label}
+        {pending ? "Google로 이동 중" : label}
       </button>
       {error ? (
         <p

@@ -279,7 +279,7 @@ export function WorkoutForm({ mode, workoutId, initial }: Props) {
         className="bg-pine-800 text-fog-50 hover:bg-pine-700 h-12 rounded-lg font-semibold disabled:opacity-60"
       >
         {pending
-          ? "저장 중…"
+          ? "저장 중"
           : mode === "create"
             ? "기록 저장"
             : "수정 저장"}
