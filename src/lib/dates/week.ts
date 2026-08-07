@@ -31,6 +31,10 @@ export function getWeekStartDate(
   date: Date = new Date(),
 ): string {
   const localDate = formatLocalDate(timeZone, date);
+  return getWeekStartFromLocalDateString(localDate);
+}
+
+export function getWeekStartFromLocalDateString(localDate: string): string {
   const [year, month, day] = localDate.split("-").map(Number);
   const utcNoon = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
   const weekday = utcNoon.getUTCDay(); // 0 Sun .. 6 Sat
