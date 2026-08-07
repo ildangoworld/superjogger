@@ -21,7 +21,7 @@
 
 | Phase | 이름 | 상태 |
 |------:|------|------|
-| A1 | 관리자 기반 (계정·권한·접이식 셸·비밀번호 변경) | 미착수 |
+| A1 | 관리자 기반 (계정·권한·접이식 셸·비밀번호 변경) | 완료 |
 | A2 | 대시보드·회원 관리·크루 관리 | 미착수 |
 | A3 | 약관·개인정보처리방침 (버전 관리, 사용자 공개 페이지, 가입 동의) | 미착수 |
 | A4 | 문의하기 (사용자 작성, 관리자 답변) | 미착수 |
@@ -98,13 +98,24 @@
 - `.env.example`에 Vercel/Supabase OAuth 운영 체크리스트 반영
 - 실제 Vercel 프로덕션 배포는 계정 연결 후 `vercel`/`git push`로 진행
 
+## Phase A1 — 관리자 기반
+
+- `admin_users` (SUPER/STAFF, 메뉴 권한 배열) + RLS(본인 select만)
+- `/admin` 보호: 미로그인 → `/admin/login`, 비관리자 → `/admin/forbidden`
+- 접이식 사이드바(데스크톱 접기, 모바일 오버레이) + 권한 기반 메뉴
+- 내 계정 비밀번호 변경(현재 비밀번호 재확인 후 `updateUser`)
+- 단위 테스트: `src/features/admin/permissions.test.ts`
+- 마이그레이션: `supabase/migrations/20260807050000_phase_a1_admin_users.sql`
+  - 첫 SUPER 관리자는 마이그레이션 주석의 insert로 수동 시드
+
 ## 다음에 할 일
 
-- 관리자 사이트 Phase A1 착수 (`ADMIN.md` 기준)
+- 관리자 사이트 Phase A2 착수 (대시보드·회원·크루)
+- `admin_users` 마이그레이션 적용 후 첫 SUPER 관리자 수동 시드
 - 약관·개인정보처리방침 초안(`docs/legal/`)의 `[운영자 입력 필요]` 항목 확정
 - Vercel 프로젝트 연결 및 운영 환경변수 등록
 - Supabase Site URL / Redirect URLs를 프로덕션 도메인으로 설정
-- Phase 4·5 마이그레이션이 원격 DB에 적용됐는지 확인
+- Phase 4·5·A1 마이그레이션이 원격 DB에 적용됐는지 확인
 
 ## 로컬 확인
 
@@ -115,7 +126,7 @@ npm run lint
 npm run build
 ```
 
-Supabase SQL Editor에서 Phase 1·2·4·5 마이그레이션을 순서대로 적용한다.  
+Supabase SQL Editor에서 Phase 1·2·4·5·A1 마이그레이션을 순서대로 적용한다.  
 환경변수는 `.env.example`을 참고해 `.env.local`(및 Vercel)에 설정한다.
 
 ## 문서 갱신 규칙

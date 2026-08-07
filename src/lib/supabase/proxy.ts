@@ -12,6 +12,7 @@ const PUBLIC_PREFIXES = [
   "/forgot-password",
   "/reset-password",
   "/auth",
+  "/admin/login",
 ];
 
 function isPublicPath(pathname: string): boolean {
@@ -26,6 +27,22 @@ function isAuthEntryPath(pathname: string): boolean {
     pathname === "/signup" ||
     pathname === "/forgot-password"
   );
+}
+
+function isAdminPath(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
+}
+
+async function isAdminUser(
+  supabase: ReturnType<typeof createServerClient>,
+  userId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("admin_users")
+    .select("user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return Boolean(data);
 }
 
 export async function updateSession(request: NextRequest) {
@@ -61,6 +78,43 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+
+  if (isAdminPath(pathname)) {
+    if (pathname === "/admin/login" || pathname.startsWith("/admin/login/")) {
+      if (user && (await isAdminUser(supabase, user.id))) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/admin";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+      return supabaseResponse;
+    }
+
+    if (pathname === "/admin/forbidden") {
+      if (!user) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/admin/login";
+        return NextResponse.redirect(url);
+      }
+      return supabaseResponse;
+    }
+
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/login";
+      url.searchParams.set("next", pathname);
+      return NextResponse.redirect(url);
+    }
+
+    if (!(await isAdminUser(supabase, user.id))) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/forbidden";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+
+    return supabaseResponse;
+  }
 
   if (!user && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
