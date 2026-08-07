@@ -2,12 +2,9 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import {
-  signInWithEmail,
-  signInWithGoogle,
-  type ActionResult,
-} from "@/features/auth/actions";
+import { signInWithEmail, type ActionResult } from "@/features/auth/actions";
 import { AuthMessage } from "@/features/auth/components/auth-message";
+import { GoogleSignInButton } from "@/features/auth/components/google-sign-in-button";
 
 const initial: ActionResult = { ok: false };
 
@@ -47,22 +44,21 @@ export function LoginForm() {
         </button>
       </form>
 
-      <form action={signInWithGoogle}>
-        <button
-          type="submit"
-          className="border-line text-pine-800 hover:bg-fog-100 flex h-12 w-full items-center justify-center rounded-lg border text-base font-medium transition-colors"
-        >
-          Google로 계속하기
-        </button>
-      </form>
+      <GoogleSignInButton />
 
       <div className="text-muted flex flex-col gap-2 text-sm">
-        <Link href="/forgot-password" className="text-pine-700 underline-offset-4 hover:underline">
+        <Link
+          href="/forgot-password"
+          className="text-pine-700 underline-offset-4 hover:underline"
+        >
           비밀번호를 잊으셨나요?
         </Link>
         <p>
           아직 계정이 없나요?{" "}
-          <Link href="/signup" className="text-pine-700 font-medium underline-offset-4 hover:underline">
+          <Link
+            href="/signup"
+            className="text-pine-700 font-medium underline-offset-4 hover:underline"
+          >
             회원가입
           </Link>
         </p>

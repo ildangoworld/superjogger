@@ -2,12 +2,9 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import {
-  signInWithGoogle,
-  signUpWithEmail,
-  type ActionResult,
-} from "@/features/auth/actions";
+import { signUpWithEmail, type ActionResult } from "@/features/auth/actions";
 import { AuthMessage } from "@/features/auth/components/auth-message";
+import { GoogleSignInButton } from "@/features/auth/components/google-sign-in-button";
 
 const initial: ActionResult = { ok: false };
 
@@ -59,18 +56,14 @@ export function SignupForm() {
         </button>
       </form>
 
-      <form action={signInWithGoogle}>
-        <button
-          type="submit"
-          className="border-line text-pine-800 hover:bg-fog-100 flex h-12 w-full items-center justify-center rounded-lg border text-base font-medium transition-colors"
-        >
-          Google로 계속하기
-        </button>
-      </form>
+      <GoogleSignInButton />
 
       <p className="text-muted text-sm">
         이미 계정이 있나요?{" "}
-        <Link href="/login" className="text-pine-700 font-medium underline-offset-4 hover:underline">
+        <Link
+          href="/login"
+          className="text-pine-700 font-medium underline-offset-4 hover:underline"
+        >
           로그인
         </Link>
       </p>

@@ -119,26 +119,6 @@ export async function signInWithEmail(
   redirect("/onboarding");
 }
 
-export async function signInWithGoogle(): Promise<void> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: `${getAppUrl()}/auth/callback?next=/onboarding`,
-    },
-  });
-
-  if (error || !data.url) {
-    redirect(
-      `/login?error=${encodeURIComponent(
-        error?.message ?? "Google 로그인을 시작하지 못했어요.",
-      )}`,
-    );
-  }
-
-  redirect(data.url);
-}
-
 export async function requestPasswordReset(
   _prev: ActionResult,
   formData: FormData,
