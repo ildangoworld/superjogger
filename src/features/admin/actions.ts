@@ -2,6 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  withAdminPermission,
+  writeAdminAuditLog,
+} from "@/features/admin/admin-db";
 import { requireAdmin } from "@/features/admin/auth";
 import { ADMIN_MENU_ITEMS } from "@/features/admin/menu";
 import {
@@ -132,4 +136,146 @@ export async function changeAdminPassword(
 
   revalidatePath("/admin/settings/account");
   return { ok: true, message: "비밀번호를 변경했어요." };
+}
+
+export async function deleteAdminMember(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { admin, db } = await withAdminPermission("members");
+  const userId = formString(formData, "userId");
+  const confirmNickname = formString(formData, "confirmNickname").trim();
+
+  if (!userId) {
+    return { ok: false, message: "회원 정보가 없어요." };
+  }
+
+  if (userId === admin.userId) {
+    return { ok: false, message: "본인 계정은 탈퇴 처리할 수 없어요." };
+  }
+
+  const { data: profile, error: profileError } = await db
+    .from("profiles")
+    .select("nickname")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileError) {
+    return { ok: false, message: profileError.message };
+  }
+  if (!profile) {
+    return { ok: false, message: "회원을 찾을 수 없어요." };
+  }
+  if (confirmNickname !== profile.nickname) {
+    return {
+      ok: false,
+      message: "닉네임이 일치하지 않아요. 탈퇴를 확인하려면 닉네임을 입력해 주세요.",
+    };
+  }
+
+  const { error } = await db.auth.admin.deleteUser(userId);
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  await writeAdminAuditLog(db, {
+    actorId: admin.userId,
+    action: "MEMBER_DELETE",
+    targetType: "user",
+    targetId: userId,
+    detail: { nickname: profile.nickname },
+  });
+
+  revalidatePath("/admin/members");
+  redirect("/admin/members");
+}
+
+export async function reissueCrewInviteCode(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { admin, db } = await withAdminPermission("crews");
+  const crewId = formString(formData, "crewId");
+
+  if (!crewId) {
+    return { ok: false, message: "크루 정보가 없어요." };
+  }
+
+  const { data: code, error: codeError } = await db.rpc(
+    "generate_crew_invite_code",
+  );
+  if (codeError || !code) {
+    return {
+      ok: false,
+      message: codeError?.message ?? "초대 코드를 만들지 못했어요.",
+    };
+  }
+
+  const { error } = await db
+    .from("crews")
+    .update({ invite_code: code })
+    .eq("id", crewId);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  await writeAdminAuditLog(db, {
+    actorId: admin.userId,
+    action: "CREW_INVITE_REISSUE",
+    targetType: "crew",
+    targetId: crewId,
+    detail: { inviteCode: code },
+  });
+
+  revalidatePath(`/admin/crews/${crewId}`);
+  return { ok: true, message: `초대 코드를 재발급했어요: ${code}` };
+}
+
+export async function deleteAdminCrew(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { admin, db } = await withAdminPermission("crews");
+  const crewId = formString(formData, "crewId");
+  const confirmName = formString(formData, "confirmName").trim();
+
+  if (!crewId) {
+    return { ok: false, message: "크루 정보가 없어요." };
+  }
+
+  const { data: crew, error: crewError } = await db
+    .from("crews")
+    .select("name")
+    .eq("id", crewId)
+    .maybeSingle();
+
+  if (crewError) {
+    return { ok: false, message: crewError.message };
+  }
+  if (!crew) {
+    return { ok: false, message: "크루를 찾을 수 없어요." };
+  }
+  if (confirmName !== crew.name) {
+    return {
+      ok: false,
+      message: "크루 이름이 일치하지 않아요. 삭제를 확인하려면 이름을 입력해 주세요.",
+    };
+  }
+
+  const { error } = await db.from("crews").delete().eq("id", crewId);
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  await writeAdminAuditLog(db, {
+    actorId: admin.userId,
+    action: "CREW_DELETE",
+    targetType: "crew",
+    targetId: crewId,
+    detail: { name: crew.name },
+  });
+
+  revalidatePath("/admin/crews");
+  redirect("/admin/crews");
 }

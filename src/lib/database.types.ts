@@ -459,6 +459,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      admin_audit_logs: {
+        Row: {
+          id: string;
+          actor_id: string;
+          action: string;
+          target_type: string;
+          target_id: string | null;
+          detail: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          actor_id: string;
+          action: string;
+          target_type: string;
+          target_id?: string | null;
+          detail?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          actor_id?: string;
+          action?: string;
+          target_type?: string;
+          target_id?: string | null;
+          detail?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -499,6 +529,10 @@ export type Database = {
           p_week_start: string;
         };
         Returns: Json;
+      };
+      generate_crew_invite_code: {
+        Args: Record<string, never>;
+        Returns: string;
       };
     };
     Enums: Record<string, never>;
