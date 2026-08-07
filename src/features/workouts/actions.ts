@@ -8,6 +8,7 @@ import {
   runWorkoutAnalysis,
 } from "@/features/analysis/run-analysis";
 import { hasCoreAnalysisFieldsChanged } from "@/features/analysis/stale";
+import { shouldStartAutoAnalysis } from "@/features/analysis/schema";
 import { getRemainingAnalysisSlots } from "@/features/analysis/usage";
 import {
   durationPartsToSeconds,
@@ -209,7 +210,7 @@ export async function createWorkout(
     formatLocalDate(timezone),
   );
 
-  if (remaining > 0) {
+  if (shouldStartAutoAnalysis(remaining)) {
     const workoutId = created.id;
     const userId = user.id;
     const userTimezone = timezone;

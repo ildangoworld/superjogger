@@ -384,6 +384,57 @@ export type Database = {
         };
         Relationships: [];
       };
+      crews: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          owner_id: string;
+          invite_code: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          owner_id: string;
+          invite_code: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          owner_id?: string;
+          invite_code?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      crew_members: {
+        Row: {
+          crew_id: string;
+          user_id: string;
+          role: "OWNER" | "MEMBER";
+          joined_at: string;
+        };
+        Insert: {
+          crew_id: string;
+          user_id: string;
+          role: "OWNER" | "MEMBER";
+          joined_at?: string;
+        };
+        Update: {
+          crew_id?: string;
+          user_id?: string;
+          role?: "OWNER" | "MEMBER";
+          joined_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -402,6 +453,26 @@ export type Database = {
         Args: {
           p_usage_id: string;
           p_status: string;
+        };
+        Returns: Json;
+      };
+      create_crew: {
+        Args: {
+          p_name: string;
+          p_description?: string | null;
+        };
+        Returns: Json;
+      };
+      join_crew_by_invite_code: {
+        Args: {
+          p_invite_code: string;
+        };
+        Returns: Json;
+      };
+      get_crew_board: {
+        Args: {
+          p_crew_id: string;
+          p_week_start: string;
         };
         Returns: Json;
       };

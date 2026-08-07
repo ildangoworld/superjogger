@@ -7,7 +7,7 @@ export function AuthMessage({ result }: { result: ActionResult | null }) {
 
   return (
     <p
-      role="status"
+      role={result.ok ? "status" : "alert"}
       className={
         result.ok
           ? "text-pine-700 bg-pine-50 border-pine-200 rounded-lg border px-3 py-2 text-sm"

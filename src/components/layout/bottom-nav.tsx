@@ -60,7 +60,10 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="border-line bg-fog-50/90 fixed inset-x-0 bottom-0 z-10 border-t backdrop-blur-sm">
+    <nav
+      aria-label="주요 메뉴"
+      className="border-line bg-fog-50/90 fixed inset-x-0 bottom-0 z-10 border-t backdrop-blur-sm"
+    >
       <ul className="mx-auto flex w-full max-w-md items-stretch justify-between px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
         {APP_NAV_ITEMS.map((item) => {
           const isActive =

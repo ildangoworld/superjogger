@@ -14,8 +14,8 @@
 | 2 | 운동 기록 핵심 | 완료 |
 | 3 | 주간 목표와 홈 | 완료 |
 | 4 | AI 분석 | 완료 |
-| 5 | 크루 | 미착수 |
-| 6 | 품질 점검과 배포 | 미착수 |
+| 5 | 크루 | 완료 |
+| 6 | 품질 점검과 배포 | 완료 |
 
 ## 알려진 이슈 / 수정
 
@@ -69,12 +69,30 @@
 - 마이그레이션: `supabase/migrations/20260807030000_phase4_ai_analysis.sql`
   - `workout_analyses`, `ai_analysis_usage`, `user_trend_state` + RLS/RPC
 
-## 다음에 할 일 (Phase 5)
+## Phase 5 — 크루
 
-- 크루 생성·가입·탈퇴·내보내기
-- 다대다 멤버십
-- 공개용 주간 집계(보안 함수/뷰)
-- 목표 달성 / 진행 중 / 시작 전 정렬
+- 크루 생성·초대 코드 가입·나가기·소유자 내보내기
+- 다대다 멤버십, 복수 크루 전환
+- `get_crew_board` 보안 함수로 주간 집계만 공개(운동 상세·통증·AI 비공개)
+- 현황 정렬: 목표 달성 → 진행 중 → 시작 전, 동일 상태 닉네임 오름차순
+- 단위 테스트: `src/features/crews/board.test.ts`
+- 마이그레이션: `supabase/migrations/20260807040000_phase5_crews.sql`
+  - `crews`, `crew_members` + RLS/RPC
+
+## Phase 6 — 품질 점검과 배포
+
+- `npm run build` 통과, 모바일 viewport·themeColor
+- 접근성: 본문 건너뛰기, 하단 내비 `aria-label`, 오류 `role="alert"`
+- 분석 한도 동시성·4회차 자동분석 스킵 단위 테스트
+- 크루 공개 필드 화이트리스트 테스트
+- `.env.example`에 Vercel/Supabase OAuth 운영 체크리스트 반영
+- 실제 Vercel 프로덕션 배포는 계정 연결 후 `vercel`/`git push`로 진행
+
+## 다음에 할 일
+
+- Vercel 프로젝트 연결 및 운영 환경변수 등록
+- Supabase Site URL / Redirect URLs를 프로덕션 도메인으로 설정
+- Phase 4·5 마이그레이션이 원격 DB에 적용됐는지 확인
 
 ## 로컬 확인
 
@@ -82,10 +100,11 @@
 npm run dev
 npm test
 npm run lint
+npm run build
 ```
 
-Supabase SQL Editor에서 Phase 1·2·4 마이그레이션을 순서대로 적용한다.  
-환경변수는 `.env.example`을 참고해 `.env.local`에 설정한다 (`AI_API_KEY`, `AI_MODEL` 필요).
+Supabase SQL Editor에서 Phase 1·2·4·5 마이그레이션을 순서대로 적용한다.  
+환경변수는 `.env.example`을 참고해 `.env.local`(및 Vercel)에 설정한다.
 
 ## 문서 갱신 규칙
 

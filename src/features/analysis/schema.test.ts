@@ -4,6 +4,8 @@ import {
   countUsedAnalysisSlots,
   parseWorkoutAnalysisResult,
   remainingAnalysisSlots,
+  shouldStartAutoAnalysis,
+  simulateAtomicReservations,
 } from "./schema.ts";
 import { hasCoreAnalysisFieldsChanged } from "./stale.ts";
 import { analysisStatusLabel } from "./format.ts";
@@ -44,6 +46,23 @@ describe("analysis usage counting", () => {
     );
     assert.equal(remainingAnalysisSlots(3), 0);
     assert.equal(remainingAnalysisSlots(1), 2);
+  });
+
+  it("skips auto analysis when the daily limit is exhausted", () => {
+    assert.equal(shouldStartAutoAnalysis(0), false);
+    assert.equal(shouldStartAutoAnalysis(1), true);
+  });
+
+  it("never accepts more than 3 reservations under concurrent pressure", () => {
+    const result = simulateAtomicReservations(2, 5);
+    assert.equal(result.accepted, 1);
+    assert.equal(result.rejected, 4);
+    assert.equal(result.finalUsed, 3);
+
+    const fromEmpty = simulateAtomicReservations(0, 2);
+    assert.equal(fromEmpty.accepted, 2);
+    assert.equal(fromEmpty.rejected, 0);
+    assert.equal(fromEmpty.finalUsed, 2);
   });
 });
 

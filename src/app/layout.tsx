@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Noto_Sans_KR, Outfit } from "next/font/google";
 import "./globals.css";
 
@@ -24,6 +24,13 @@ export const metadata: Metadata = {
   },
   description:
     "무리한 기록 경쟁보다, 각자의 몸 상태에 맞춰 꾸준히 움직이도록 돕는 AI 조깅 코치",
+  applicationName: "SuperJogger",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#f6f8f3",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
