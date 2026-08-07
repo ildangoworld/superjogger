@@ -1,26 +1,145 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * SuperJogger 디자인 토큰
+ * 컨셉: "이른 아침의 공원 트랙" — 새벽 안개(fog), 깊은 숲(pine), 아침 햇살(dawn).
+ * 경쟁적이지 않고 차분하게, 꾸준한 페이스를 시각 언어로 삼는다.
+ */
+@theme {
+  /* 새벽 안개 — 초록빛이 도는 뉴트럴 */
+  --color-fog-50: #f6f8f3;
+  --color-fog-100: #ecf0e7;
+  --color-fog-200: #dce3d5;
+  --color-fog-300: #c2cdb8;
+  --color-fog-400: #9fae93;
+  --color-fog-500: #7d8c71;
+  --color-fog-600: #616f57;
+  --color-fog-700: #4c5745;
+  --color-fog-800: #3d4638;
+  --color-fog-900: #333a2f;
+  --color-fog-950: #1a1f17;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* 깊은 숲 — 브랜드 프라이머리 */
+  --color-pine-50: #eff7f2;
+  --color-pine-100: #d8ece0;
+  --color-pine-200: #b3d8c5;
+  --color-pine-300: #86bea4;
+  --color-pine-400: #579f81;
+  --color-pine-500: #388266;
+  --color-pine-600: #276851;
+  --color-pine-700: #1f5443;
+  --color-pine-800: #1b4438;
+  --color-pine-900: #17392f;
+  --color-pine-950: #0b201a;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* 아침 햇살 — 절제된 액센트 */
+  --color-dawn-50: #fbf6ea;
+  --color-dawn-100: #f5eacc;
+  --color-dawn-200: #ead494;
+  --color-dawn-300: #deba5c;
+  --color-dawn-400: #d3a336;
+  --color-dawn-500: #c48d24;
+  --color-dawn-600: #a96f1c;
+  --color-dawn-700: #87551b;
+  --color-dawn-800: #70461d;
+  --color-dawn-900: #603b1d;
+  --color-dawn-950: #381e0d;
+
+  /* 시맨틱 */
+  --color-background: var(--color-fog-50);
+  --color-foreground: #22302a;
+  --color-muted: var(--color-fog-600);
+  --color-line: var(--color-fog-200);
+
+  /* 타이포그래피 */
+  --font-sans:
+    var(--font-body), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-display: var(--font-display), var(--font-body), sans-serif;
+
+  /* 모션 — 급하지 않은 이징 */
+  --ease-calm: cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-rise: rise 0.8s var(--ease-calm) both;
+  --animate-pace: pace 7s linear infinite;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pace {
+    from {
+      left: 0%;
+      transform: translateX(0);
+    }
+    to {
+      left: 100%;
+      transform: translateX(-100%);
+    }
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
+
+@layer components {
+  /* 새벽 하늘 배경: 위쪽의 옅은 하늘빛 + 지평선의 아침 햇살 기운 */
+  .atmosphere {
+    background-color: var(--color-fog-50);
+    background-image:
+      radial-gradient(
+        110% 65% at 50% -10%,
+        #e6efe9 0%,
+        rgba(230, 239, 233, 0) 70%
+      ),
+      radial-gradient(
+        90% 40% at 50% 108%,
+        rgba(222, 186, 92, 0.14) 0%,
+        rgba(222, 186, 92, 0) 65%
+      ),
+      linear-gradient(to bottom, var(--color-fog-50), var(--color-fog-100));
+  }
+
+  /* 꾸준한 페이스를 상징하는 트랙 라인과 이동하는 점 */
+  .pace-line {
+    position: relative;
+    height: 1px;
+    background-image: linear-gradient(
+      to right,
+      var(--color-fog-300) 55%,
+      transparent 55%
+    );
+    background-size: 12px 1px;
+  }
+
+  .pace-line::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    margin-top: -3px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--color-dawn-400);
+    animation: var(--animate-pace);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pace-line::after {
+    animation: none;
+    left: 38%;
+  }
+
+  .animate-rise {
+    animation: none;
+  }
 }

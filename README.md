@@ -1,36 +1,744 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SuperJogger
 
-## Getting Started
+> 무리한 기록 경쟁보다, 각자의 몸 상태에 맞춰 꾸준히 움직이도록 돕는 AI 조깅 코치
 
-First, run the development server:
+SuperJogger는 달리기와 걷기 기록을 바탕으로 사용자의 운동 흐름을 분석하고 다음 운동 방향을 제안하는 서비스다. 속도, 거리, 누적 운동량으로 다른 사람과 경쟁시키지 않는다. 사용자가 스스로 확정한 주간 목표를 얼마나 꾸준히 지켰는지 보여주고, 크루원끼리는 서로의 진행 상황을 가볍게 응원할 수 있게 한다.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+이 문서는 MVP의 제품 요구사항과 구현 기준이다. Cursor는 이 문서에 없는 기능을 임의로 추가하지 말고, 모호하거나 충돌하는 요구사항이 있으면 구현 전에 질문한다.
+
+## 1. 제품 원칙
+
+1. 경쟁 상대는 다른 사람이 아니라 사용자가 정한 자신의 목표다.
+2. 빠른 달리기뿐 아니라 걷기와 걷기·달리기 혼합 운동도 가치 있게 다룬다.
+3. 목표는 서비스가 추천하지만 최종 결정은 사용자가 한다.
+4. 목표를 초과한 운동을 경쟁 점수로 보상하지 않아 과도한 운동을 유도하지 않는다.
+5. AI는 기록을 해석하고 참고 방향을 제시하지만 의료적 진단이나 처방을 하지 않는다.
+6. 통증이나 위험 신호가 있으면 운동 권장보다 휴식과 전문가 상담 안내를 우선한다.
+7. AI 분석 실패나 한도 초과가 운동 기록 저장을 방해해서는 안 된다.
+8. 건강 관련 상세 정보는 기본적으로 본인에게만 공개한다.
+
+## 2. MVP 목표
+
+사용자가 다음 흐름을 끊김 없이 경험하게 만드는 것이 MVP의 목표다.
+
+1. 이메일 또는 Google 계정으로 로그인한다.
+2. 기본 운동 습관과 목표를 입력한다.
+3. 서비스의 추천을 참고해 이번 주 목표 횟수를 확정한다.
+4. 달리기, 걷기 또는 걷기·달리기 혼합 기록을 직접 입력한다.
+5. 저장 즉시 목표 반영 여부와 AI 분석 결과를 확인한다.
+6. 최근 기록과 4주간의 변화를 확인한다.
+7. 크루에서 구성원들의 주간 진행 상황을 확인한다.
+
+## 3. MVP 포함 범위
+
+- 이메일 로그인 및 회원가입
+- Google 로그인
+- 온보딩과 닉네임 설정
+- 주간 목표 추천 및 사용자 확정
+- 달리기, 걷기, 걷기·달리기 혼합 기록 직접 입력
+- 일반 코드에 의한 운동 인정 여부 계산
+- AI 운동 분석 및 다음 운동 제안
+- 최근 운동 기록 목록과 상세 화면
+- 최근 4주 변화 요약
+- 최근 8주 성실도 기반 조거 등급
+- 초대 코드 또는 링크를 이용한 크루 가입
+- 여러 크루 가입이 가능한 데이터 구조
+- 크루원 현황과 주간 목표 진행도 표시
+- 프로필 및 추천 상세도 설정
+
+## 4. MVP 제외 범위
+
+- 전체 사용자 랭킹 및 크루 내 순위
+- 운동량, 속도, 거리 기반 경쟁 점수
+- 회복 주간 설정 기능
+- 운동 결과 화면 캡처 분석
+- Garmin, Strava, Apple Health 등 외부 서비스 연동
+- GPS를 이용한 실시간 운동 측정
+- 결제 및 유료 요금제
+- 배지 수집 UI
+- 대회 준비 프로그램
+- 날씨 자동 입력
+- 푸시 알림
+- Apple 로그인
+- 정교한 부정 기록 탐지
+
+제외 기능을 구현하지는 않되, 명확한 비용이 들지 않는 범위에서는 향후 확장을 막지 않는 데이터 구조를 사용한다.
+
+## 5. 핵심 정책
+
+### 5.1 운동 카테고리
+
+운동 기록 입력 화면의 첫 번째 항목으로 제공한다.
+
+- `RUNNING`: 달리기, 기본 선택값
+- `WALKING`: 걷기
+- `MIXED`: 걷기·달리기 혼합
+
+세 카테고리의 목표 인정 기준은 동일하다. AI는 카테고리뿐 아니라 시간, 거리, 페이스, 심박수, 체감 강도 등을 함께 보고 실제 운동 강도를 해석한다.
+
+### 5.2 운동 1회 인정 기준
+
+다음 중 하나 이상을 충족하면 주간 목표 운동 1회로 인정한다.
+
+- 운동시간 10분 이상
+- 거리 1km 이상
+
+추가 규칙:
+
+- 조건 미달 기록도 저장하고 분석할 수 있지만 주간 목표에는 반영하지 않는다.
+- 하루에 여러 운동을 등록해도 주간 목표에는 하루 최대 1회만 반영한다.
+- 같은 날 인정 조건을 충족한 기록이 여러 개면 가장 먼저 저장된 기록을 대표 인정 기록으로 취급한다.
+- 대표 기록을 삭제하거나 인정 조건 미달로 수정하면, 같은 날짜의 다음 인정 가능한 기록을 자동으로 반영한다.
+- 목표 초과 기록은 모두 저장하고 분석하지만 추가 점수는 없다.
+- 미래 날짜의 운동은 등록할 수 없다.
+
+목표 인정 여부는 AI가 아니라 결정론적인 애플리케이션 코드로 계산한다.
+
+### 5.3 주간 목표
+
+- 목표 단위는 운동 횟수이며 `주 1~7회` 중 선택한다.
+- 서비스가 최근 기록, 운동 습관, 컨디션, 통증 여부와 사용자 목적을 바탕으로 목표를 추천한다.
+- 사용자가 추천값을 그대로 선택하거나 수정한 뒤 최종 확정한다.
+- 주간 기준은 사용자의 로컬 시간대에서 월요일 00:00부터 일요일 23:59:59까지다.
+- 주중에는 현재 주의 목표를 낮추지 않는다.
+- 목표 변경은 기본적으로 다음 주부터 적용한다.
+- 별도의 회복 주간은 만들지 않는다. 운동하지 않거나 걷기만 기록하는 것은 사용자의 선택이다.
+- AI는 기록 감소를 보고 회복 주간이었다고 단정하지 않는다.
+
+AI 표현 예시:
+
+> 최근 일주일은 이전보다 운동량이 줄었어요. 의도적으로 회복하는 기간이었다면 자연스러운 변화예요.
+
+### 5.4 조거 등급
+
+조거 등급은 속도나 실력이 아니라 최근 꾸준함을 나타내는 개인 상태다. 다른 사용자와의 순위를 의미하지 않는다.
+
+최근 8주의 주간 목표 달성률을 기준으로 한다.
+
+| 달성률 | 등급 | 코드 |
+|---:|---|---|
+| 0~39% | 노말 조거 | `NORMAL` |
+| 40~59% | 레어 조거 | `RARE` |
+| 60~74% | 에픽 조거 | `EPIC` |
+| 75~87% | 유니크 조거 | `UNIQUE` |
+| 88~100% | 레전더리 조거 | `LEGENDARY` |
+
+등급 계산 규칙:
+
+- 첫 2주 동안은 `등급 산정 중`으로 표시한다.
+- 3~7주 차에는 완료된 주만 기준으로 임시 등급을 계산한다.
+- 8주 차부터 최근 완료된 8주를 사용해 정식 등급을 계산한다.
+- 현재 진행 중인 주는 등급 계산에서 제외한다.
+- 매주 월요일에 갱신하되, 화면 조회 시에도 계산 결과의 최신성을 검증한다.
+- 한 주의 성공 여부는 `인정된 운동 일수 >= 확정된 목표 횟수`로 계산한다.
+- 목표를 초과해도 해당 주의 성공값은 1을 넘지 않는다.
+
+### 5.5 크루 현황
+
+MVP에는 랭킹과 순위를 만들지 않는다. 메뉴와 화면 명칭은 `크루 현황`을 사용한다.
+
+크루원별 공개 정보:
+
+- 닉네임
+- 프로필 이미지
+- 조거 등급
+- 이번 주 목표 횟수
+- 이번 주 인정 횟수
+- 이번 주 달성률
+- 상태: 목표 달성 / 진행 중 / 시작 전
+
+정렬 순서:
+
+1. `목표 달성`: 인정 횟수가 목표 횟수 이상
+2. `진행 중`: 인정 횟수가 1회 이상이고 목표 미달
+3. `시작 전`: 인정 횟수 0회
+
+같은 상태 안에서는 순위를 암시하지 않도록 닉네임 오름차순으로 정렬한다. 순위 번호는 표시하지 않는다.
+
+크루에 공개하지 않는 정보:
+
+- 개별 운동의 상세 수치와 기록 내용
+- 통증 여부 및 통증 상세
+- 컨디션
+- 심박수
+- 개인 메모
+- AI 분석 내용
+
+### 5.6 크루 가입 정책
+
+- 운영자 또는 사용자가 크루를 생성할 수 있다.
+- 초대 코드 또는 초대 링크로 가입한다.
+- 사용자는 여러 크루에 가입할 수 있도록 처음부터 다대다 구조로 설계한다.
+- 초기 UI가 한 크루 중심이어도 DB에 단일 크루 제약을 두지 않는다.
+- 크루 소유자는 구성원을 내보낼 수 있다.
+- 사용자는 크루에서 스스로 나갈 수 있다.
+- 동일한 크루에 중복 가입할 수 없다.
+
+## 6. 운동 기록 입력
+
+### 필수 입력
+
+- 카테고리: 달리기 / 걷기 / 걷기·달리기 혼합
+- 운동 날짜와 시작 시각
+- 거리(km)
+- 운동시간
+- 체감 강도
+- 컨디션
+- 통증 여부
+
+### 선택 입력
+
+- 평균 심박수
+- 케이던스 또는 걸음 수
+- 메모
+- 통증 부위와 상세 내용
+
+### 권장 입력 형식
+
+- 거리: 0 이상의 소수, km 단위
+- 시간: 초 단위 정수로 저장하고 UI에서는 시·분·초로 입력 및 표시
+- 체감 강도: 1~5
+- 컨디션: 1~5
+- 심박수: bpm 정수
+- 카테고리 기본값: `RUNNING`
+
+### 수정과 삭제
+
+- 사용자는 자신의 기록만 수정하거나 삭제할 수 있다.
+- 수정·삭제 직후 해당 주의 인정 횟수와 달성률을 다시 계산한다.
+- AI 분석 완료 후 핵심 데이터가 바뀌면 기존 분석을 `STALE` 상태로 표시한다.
+- 핵심 데이터: 카테고리, 날짜, 거리, 시간, 체감 강도, 컨디션, 통증 관련 정보, 심박수
+- 수정만으로 AI를 자동 호출하지 않는다.
+- 사용자가 `다시 분석하기`를 눌렀을 때만 새 분석을 요청한다.
+- 동일 날짜·거리·시간의 유사 기록은 경고하지만 등록을 막지는 않는다.
+
+## 7. AI 분석
+
+### 7.1 역할
+
+AI는 다음 역할만 담당한다.
+
+- 이번 운동의 강도와 의미를 사용하기 쉬운 언어로 설명
+- 최근 운동 흐름과 비교
+- 무리하거나 급격한 변화가 있는지 주의 환기
+- 다음 운동의 방향 제안
+- 사용자 설정에 따라 가벼운 추천 또는 구체적인 추천 제공
+
+AI가 담당하지 않는 것:
+
+- 운동 인정 여부 계산
+- 조거 등급 계산
+- 질병 및 부상 진단
+- 치료 또는 의학적 처방
+- 확정적인 회복 상태 판정
+
+### 7.2 추천 상세도
+
+사용자가 온보딩 또는 설정에서 선택하고 언제든 변경할 수 있다.
+
+- `LIGHT`: 다음 운동의 방향만 간단히 제안, 기본값
+- `DETAILED`: 권장 시간, 강도 및 주의사항까지 제안
+
+가볍게 추천 예시:
+
+> 최근 운동 강도가 높았어요. 다음 운동은 쉬거나 가볍게 움직이는 것을 추천해요.
+
+구체적으로 추천 예시:
+
+> 다음 운동은 25분 정도, 대화가 가능한 편안한 강도로 움직여보세요. 통증이 다시 느껴지면 운동을 중단하고 상태를 확인하세요.
+
+### 7.3 안전 원칙
+
+- 통증, 갑작스러운 운동량 증가 또는 위험 신호가 있으면 성과 칭찬보다 안전 안내를 우선한다.
+- 의료 진단처럼 단정하지 않는다.
+- 심각하거나 지속되는 증상은 운동 중단 및 의료 전문가 상담을 안내한다.
+- 사용자의 기록만으로 알 수 없는 의도를 추측해 확정적으로 표현하지 않는다.
+
+### 7.4 하루 분석 한도
+
+사용자별 로컬 날짜를 기준으로 `하루 총 3회 AI 분석`을 제공한다.
+
+다음 호출을 모두 같은 한도에 포함한다.
+
+- 새 기록 저장 직후의 자동 분석
+- 사용자가 누른 `다시 분석하기`
+
+예시:
+
+- 자동 분석 2회 + 재분석 1회 = 총 3회 사용
+- 이후 등록한 기록은 저장되지만 자동 분석하지 않음
+- 자동 분석 3회 후 재분석 요청도 다음 날까지 불가
+
+추가 규칙:
+
+- 한도는 자정에 초기화되는 별도 카운터보다, 해당 로컬 날짜에 실제 소비된 성공 호출과 정책상 소비 처리된 호출을 집계하는 방식으로 구현한다.
+- 동시 요청으로 3회를 초과하지 않도록 DB 트랜잭션 또는 원자적 서버 로직을 사용한다.
+- 한도를 초과한 기록은 다음 날 자동으로 소급 분석하지 않는다.
+- 다음 날 새로 등록하거나 사용자가 직접 다시 분석을 요청한 데이터부터 분석한다.
+- 분석 한도 검증과 AI 호출은 클라이언트가 아니라 서버에서 처리한다.
+- API 키는 절대 클라이언트에 노출하지 않는다.
+
+권장 호출 소비 정책:
+
+- AI 제공자에게 요청을 보내기 전 슬롯을 원자적으로 예약한다.
+- 입력 검증 실패나 서버 내부 사전 오류는 횟수를 차감하지 않는다.
+- AI 제공자에게 요청이 실제 전송된 뒤 실패한 경우에는 무한 재시도를 막기 위해 횟수에 포함한다.
+- 네트워크 일시 오류에 대한 서버 내부 재시도는 동일한 1회 요청으로 취급한다.
+
+한도 초과 안내:
+
+> 오늘 제공되는 AI 분석 3회를 모두 사용했어요. 운동 기록은 정상적으로 저장됐으며, 내일부터 다시 분석을 이용할 수 있어요.
+
+### 7.5 재분석 정책
+
+- 기록 수정만으로 재분석하지 않는다.
+- `다시 분석하기` 버튼을 눌렀을 때만 호출한다.
+- 재분석도 하루 총 3회에 포함한다.
+- 새 분석이 성공한 뒤에만 기존 분석을 교체한다.
+- 새 분석이 실패하면 기존 분석 결과를 유지한다.
+- 분석 이력을 별도 테이블에 저장하고 운동 기록에는 현재 활성 분석 ID를 연결한다.
+
+### 7.6 AI 입력 컨텍스트
+
+매 분석 때 전체 운동 기록을 보내지 않는다. 서버가 다음 데이터를 구조화해 전달한다.
+
+- 이번 운동 기록
+- 이번 운동의 목표 인정 여부
+- 최근 운동 5개
+- 최근 4주의 집계 요약
+- 최근 통증 기록 요약
+- 현재 주간 목표와 진행 상황
+- 사용자의 추천 상세도
+- 직전 추세 분석 요약
+
+최근 4주 요약 항목:
+
+- 주차별 운동 횟수와 인정 일수
+- 총 운동시간과 총 거리
+- 달리기, 걷기, 혼합 비중
+- 평균 체감 강도
+- 평균 컨디션
+- 통증 기록 횟수와 부위
+- 각 주의 목표와 달성 여부
+
+새로운 추세 요약을 저장해 다음 분석에 전달한다. 단, AI가 만든 이전 요약보다 최신 원본 기록과 코드로 집계한 수치를 우선 근거로 사용한다.
+
+### 7.7 AI 응답 형식
+
+AI 응답은 자유 텍스트 하나로만 받지 말고 구조화된 JSON으로 검증한다.
+
+```ts
+type WorkoutAnalysisResult = {
+  summary: string;
+  intensityInterpretation: string;
+  trend: string;
+  nextWorkoutSuggestion: string;
+  safetyNotice: string | null;
+  trendSummaryForNextAnalysis: string;
+  riskLevel: "NONE" | "CAUTION" | "HIGH";
+};
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+스키마 검증에 실패하면 제한된 횟수만 재시도하고, 최종 실패 시 기록은 유지한 채 분석 실패 상태를 표시한다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 8. 주요 화면
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 8.1 로그인
 
-## Learn More
+- 이메일 회원가입 및 로그인
+- 비밀번호 재설정
+- Google 로그인
 
-To learn more about Next.js, take a look at the following resources:
+### 8.2 온보딩
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- 닉네임
+- 최근 한 달 평균 운동 횟수
+- 운동 경험
+- 현재 목표
+- 현실적으로 운동 가능한 요일
+- 현재 컨디션과 통증 여부
+- AI 추천 상세도
+- 서비스가 주간 목표를 추천하고 사용자가 최종 확정
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 8.3 홈
 
-## Deploy on Vercel
+우선순위 순서:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. 이번 주 목표와 진행도: 예 `2/3회`
+2. 다음 운동 추천
+3. 오늘 운동 기록하기
+4. 최근 운동 분석
+5. 현재 조거 등급
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+통계로 화면을 과도하게 채우지 않는다.
+
+### 8.4 운동 기록 입력
+
+- 맨 앞에 카테고리 선택
+- 달리기를 기본 선택
+- 필수·선택 입력 필드
+- 저장 직후 목표 반영 결과 표시
+- 분석 가능 횟수가 남아 있으면 자동 분석
+- 한도 소진 시 기록 저장 성공과 분석 미실행을 분리해 안내
+
+### 8.5 AI 분석 결과
+
+- 이번 운동 요약
+- 강도 해석
+- 최근 흐름과 비교
+- 다음 운동 제안
+- 필요한 경우 안전 안내
+- 다시 분석하기 버튼과 남은 일일 분석 횟수
+
+### 8.6 운동 기록
+
+- 최신순 목록
+- 카테고리, 날짜, 시간, 거리, 인정 여부 표시
+- 상세, 수정, 삭제
+- 분석 상태: 대기 / 완료 / 오래됨 / 실패 / 한도 초과로 미분석
+
+### 8.7 최근 4주 변화
+
+- 주차별 운동 횟수
+- 시간과 거리 변화
+- 카테고리 비중
+- 목표 달성 여부
+- AI 추세 요약
+
+### 8.8 크루 현황
+
+- 가입한 크루 전환
+- 초대 코드로 크루 가입
+- 크루 생성
+- 목표 달성 / 진행 중 / 시작 전 그룹 순서로 구성원 표시
+- 순위 번호 표시 금지
+
+### 8.9 프로필 및 설정
+
+- 닉네임과 프로필 이미지
+- 현재 조거 등급과 산정 설명
+- 주간 목표 확인 및 다음 주 목표 변경
+- AI 추천 상세도 변경
+- 가입 크루 관리
+- 로그아웃 및 회원 탈퇴
+
+## 9. 권장 기술 스택
+
+초기 구현 기준이며, 이미 프로젝트에 다른 합리적인 선택이 존재하면 충돌 여부를 먼저 확인한다.
+
+- Frontend: Next.js + TypeScript
+- Styling: Tailwind CSS
+- Backend/DB/Auth: Supabase
+- Authentication: Supabase Auth 이메일 + Google OAuth
+- Database: PostgreSQL
+- Authorization: Supabase Row Level Security
+- AI 호출: 서버 전용 API Route 또는 Supabase Edge Function
+- Validation: Zod 등 런타임 스키마 검증 도구
+- Deployment: Vercel
+
+모바일 우선 반응형 웹으로 시작한다. 이후 앱 패키징 가능성을 고려하되 MVP에서 네이티브 앱 코드는 만들지 않는다.
+
+## 10. 데이터 모델 초안
+
+실제 migration 작성 전에 관계와 제약조건을 검토한다. 모든 테이블에는 필요에 따라 `created_at`, `updated_at`을 둔다.
+
+### `profiles`
+
+- `id uuid PK` → `auth.users.id`
+- `nickname text unique not null`
+- `avatar_url text null`
+- `timezone text not null default 'Asia/Seoul'`
+- `recommendation_detail text not null default 'LIGHT'`
+- `onboarding_completed boolean not null default false`
+
+### `user_preferences`
+
+- `user_id uuid PK FK profiles.id`
+- `experience_level text null`
+- `primary_goal text null`
+- `available_weekdays smallint[] null`
+- `baseline_weekly_frequency numeric null`
+
+### `weekly_goals`
+
+- `id uuid PK`
+- `user_id uuid FK profiles.id`
+- `week_start date not null`
+- `target_count smallint not null check 1~7`
+- `recommended_count smallint null`
+- `recommendation_reason text null`
+- `confirmed_at timestamptz not null`
+- unique: `(user_id, week_start)`
+
+### `workouts`
+
+- `id uuid PK`
+- `user_id uuid FK profiles.id`
+- `category text not null` (`RUNNING`, `WALKING`, `MIXED`)
+- `started_at timestamptz not null`
+- `local_date date not null`
+- `duration_seconds integer not null check >= 0`
+- `distance_meters integer not null check >= 0`
+- `perceived_exertion smallint not null check 1~5`
+- `condition_score smallint not null check 1~5`
+- `has_pain boolean not null default false`
+- `pain_area text null`
+- `pain_details text null`
+- `average_heart_rate smallint null`
+- `cadence smallint null`
+- `step_count integer null`
+- `memo text null`
+- `qualifies_by_rule boolean not null`
+- `counts_for_daily_goal boolean not null`
+- `active_analysis_id uuid null`
+
+`local_date`, `qualifies_by_rule`, `counts_for_daily_goal`은 서버에서 계산한다. 클라이언트 입력을 신뢰하지 않는다.
+
+### `workout_analyses`
+
+- `id uuid PK`
+- `workout_id uuid FK workouts.id`
+- `user_id uuid FK profiles.id`
+- `status text not null` (`PENDING`, `COMPLETED`, `FAILED`, `STALE`)
+- `trigger_type text not null` (`AUTO`, `REANALYZE`)
+- `summary text null`
+- `intensity_interpretation text null`
+- `trend text null`
+- `next_workout_suggestion text null`
+- `safety_notice text null`
+- `trend_summary text null`
+- `risk_level text null`
+- `model_name text null`
+- `prompt_version text not null`
+- `completed_at timestamptz null`
+
+### `ai_analysis_usage`
+
+- `id uuid PK`
+- `user_id uuid FK profiles.id`
+- `usage_local_date date not null`
+- `workout_id uuid FK workouts.id`
+- `analysis_id uuid null FK workout_analyses.id`
+- `trigger_type text not null`
+- `status text not null` (`RESERVED`, `CONSUMED`, `RELEASED`)
+- `request_key text unique not null`
+
+서버 함수 또는 트랜잭션이 `(user_id, usage_local_date)`의 `RESERVED + CONSUMED` 개수를 확인해 최대 3개까지만 슬롯을 예약한다.
+
+### `weekly_summaries`
+
+- `id uuid PK`
+- `user_id uuid FK profiles.id`
+- `week_start date not null`
+- `goal_count smallint not null`
+- `qualified_day_count smallint not null`
+- `goal_achieved boolean not null`
+- `workout_count integer not null`
+- `total_duration_seconds integer not null`
+- `total_distance_meters integer not null`
+- `category_counts jsonb not null`
+- `average_exertion numeric null`
+- `average_condition numeric null`
+- `pain_record_count integer not null`
+- unique: `(user_id, week_start)`
+
+### `user_trend_state`
+
+- `user_id uuid PK FK profiles.id`
+- `latest_trend_summary text null`
+- `source_analysis_id uuid null`
+- `updated_at timestamptz not null`
+
+### `crews`
+
+- `id uuid PK`
+- `name text not null`
+- `description text null`
+- `owner_id uuid FK profiles.id`
+- `invite_code text unique not null`
+
+### `crew_members`
+
+- `crew_id uuid FK crews.id`
+- `user_id uuid FK profiles.id`
+- `role text not null` (`OWNER`, `MEMBER`)
+- `joined_at timestamptz not null`
+- PK: `(crew_id, user_id)`
+
+## 11. 보안 및 개인정보
+
+- 모든 사용자 데이터 테이블에 RLS를 적용한다.
+- 사용자는 자신의 프로필, 목표, 운동, 분석과 사용량만 조회·수정할 수 있다.
+- 크루원은 크루 현황용으로 허용된 최소 집계 정보만 조회할 수 있다.
+- 크루 조회를 위해 원본 운동 테이블을 직접 공개하지 않는다. 보안 함수나 제한된 뷰에서 주간 집계만 반환한다.
+- 크루 소유자의 권한은 구성원 관리 범위로 제한한다.
+- 통증, 컨디션, 심박수, 메모, AI 결과는 크루원에게 노출하지 않는다.
+- AI API 키와 서비스 역할 키는 서버 환경변수에만 저장한다.
+- 서버 로그에 통증 상세나 개인 메모 전문을 불필요하게 기록하지 않는다.
+- 회원 탈퇴 정책과 관련 데이터 정리 방식을 구현 전에 명시한다.
+
+## 12. 시간대와 날짜 처리
+
+- DB의 실제 시각은 `timestamptz`로 저장한다.
+- 사용자 프로필에 IANA 시간대 문자열을 저장한다.
+- 일일 분석 한도, 운동의 로컬 날짜, 주간 범위는 사용자 시간대를 기준으로 계산한다.
+- 최초 기본 시간대는 `Asia/Seoul`이지만 하드코딩하지 않는다.
+- 시간대 변경 시 과거 운동의 `local_date`를 임의로 다시 쓰지 않는다.
+
+## 13. 주요 서버 로직
+
+### 운동 저장
+
+1. 인증 사용자를 확인한다.
+2. 입력을 검증하고 미래 시각 여부를 확인한다.
+3. 사용자 시간대로 `local_date`와 `week_start`를 계산한다.
+4. `10분 이상 또는 1km 이상` 규칙으로 `qualifies_by_rule`을 계산한다.
+5. 같은 로컬 날짜의 기존 인정 기록을 확인해 `counts_for_daily_goal`을 결정한다.
+6. 운동 기록을 먼저 커밋한다.
+7. 주간 집계를 갱신한다.
+8. AI 분석 슬롯이 남아 있으면 자동 분석 작업을 시작한다.
+9. 한도가 없거나 분석이 실패해도 운동 저장 성공 응답을 유지한다.
+
+### 운동 수정·삭제 후 재계산
+
+1. 해당 기록의 소유권을 확인한다.
+2. 수정 또는 삭제한다.
+3. 영향을 받은 모든 로컬 날짜의 대표 인정 기록을 재선정한다.
+4. 영향을 받은 주간 요약과 등급을 재계산한다.
+5. 핵심 값 수정 시 기존 활성 분석을 `STALE`로 표시한다.
+6. AI는 자동 호출하지 않는다.
+
+### AI 분석 요청
+
+1. 운동 소유권과 입력 상태를 확인한다.
+2. 사용자 시간대의 사용 날짜를 계산한다.
+3. 멱등성 키와 일일 슬롯을 원자적으로 예약한다.
+4. 필요한 최근 기록과 집계 데이터만 조회한다.
+5. 구조화된 입력으로 AI를 호출한다.
+6. 응답 스키마와 안전 필드를 검증한다.
+7. 성공 시 분석, 활성 분석 ID, 추세 상태를 하나의 트랜잭션으로 갱신한다.
+8. 실패 시 기존 활성 분석을 유지하고 실패 상태를 기록한다.
+
+## 14. 구현 순서
+
+### Phase 0. 프로젝트 기반
+
+- Next.js, TypeScript, Tailwind 설정
+- 환경변수 예시 파일 작성
+- 코드 포맷과 린트 설정
+- Supabase 로컬 또는 개발 프로젝트 연결
+- 기본 모바일 레이아웃과 디자인 토큰
+
+### Phase 1. 인증과 프로필
+
+- 이메일 인증
+- Google OAuth
+- 보호 라우트
+- 프로필과 온보딩
+- RLS 기본 정책
+
+### Phase 2. 운동 기록 핵심
+
+- 운동 입력, 목록, 상세, 수정, 삭제
+- 카테고리 3종
+- 인정 규칙과 하루 최대 1회 반영
+- 미래 날짜 및 입력 검증
+- 단위 테스트
+
+### Phase 3. 주간 목표와 홈
+
+- 목표 추천 입력값 수집
+- 추천값 제시와 사용자 확정
+- 주간 진행도와 홈 화면
+- 최근 8주 성실도 및 조거 등급
+
+### Phase 4. AI 분석
+
+- 서버 전용 AI 호출
+- 구조화 응답 검증
+- 하루 총 3회 원자적 제한
+- 자동 분석과 다시 분석하기
+- 최근 5개, 최근 4주 요약, 직전 추세 컨텍스트
+- 안전 안내와 실패 처리
+
+### Phase 5. 크루
+
+- 크루 생성, 가입, 탈퇴, 구성원 내보내기
+- 다대다 가입 구조
+- 공개용 집계 쿼리 또는 보안 함수
+- 목표 달성 / 진행 중 / 시작 전 정렬
+
+### Phase 6. 품질 점검과 배포
+
+- 모바일 화면 점검
+- 접근성 및 빈 상태·오류 상태 점검
+- RLS 권한 테스트
+- 분석 한도 동시성 테스트
+- Vercel 배포
+- 운영 환경변수 및 OAuth 리디렉션 설정
+
+각 Phase는 이전 Phase의 핵심 테스트가 통과한 뒤 진행한다. 한 번에 전체 서비스를 생성하려 하지 말고 작은 단위로 구현하고 검증한다.
+
+## 15. 필수 테스트 시나리오
+
+- 9분 59초, 999m 운동은 기록되지만 목표에 미반영
+- 10분, 0m 운동은 목표에 반영
+- 1km, 5분 운동은 목표에 반영
+- 같은 날 인정 운동 3개를 등록해도 목표는 1회만 증가
+- 같은 날 대표 기록 삭제 시 다음 인정 기록이 목표에 반영
+- 달리기, 걷기, 혼합 모두 동일한 인정 규칙 적용
+- 목표 3회 사용자가 4회 운동해도 해당 주 성공값은 1개
+- 현재 진행 주는 조거 등급 계산에서 제외
+- 자동 분석 2회와 재분석 1회 후 추가 분석 차단
+- 동시에 2개 분석 요청이 들어와도 하루 총 3회를 초과하지 않음
+- 4번째 운동은 저장되지만 자동 분석되지 않음
+- 다음 날 전날의 미분석 기록이 자동 소급 분석되지 않음
+- 재분석 실패 시 기존 성공 분석 유지
+- 운동 핵심 값 수정 시 분석이 `STALE`로 표시되고 자동 재분석되지 않음
+- 크루원이 다른 사용자의 통증, 컨디션, 메모, 심박수, 분석에 접근할 수 없음
+- 크루 현황이 목표 달성 → 진행 중 → 시작 전 순서로 표시
+- 사용자가 여러 크루에 가입 가능하고 동일 크루에는 중복 가입 불가
+- 사용자 시간대 기준 자정과 월요일 경계가 정확히 적용
+
+## 16. UX 문구 기준
+
+- 운동을 못 했다는 이유로 사용자를 비난하거나 죄책감을 유발하지 않는다.
+- `실패`보다 현재 상태와 다음 선택을 설명한다.
+- 걷기를 달리기보다 낮은 가치의 운동처럼 표현하지 않는다.
+- AI 분석은 사실, 해석, 제안을 구분한다.
+- 알 수 없는 의도나 건강 상태를 단정하지 않는다.
+
+대표 문구:
+
+> 달리지 않아도 괜찮아요. 오늘 몸에 맞게 10분부터 움직여보세요.
+
+> 이번 주 목표를 달성했어요. 더 채우기보다 지금의 리듬을 이어가세요.
+
+> 오늘 제공되는 AI 분석 3회를 모두 사용했어요. 운동 기록은 정상적으로 저장됐어요.
+
+## 17. Cursor 작업 원칙
+
+1. 구현 전 현재 코드와 이 README의 관련 요구사항을 먼저 확인한다.
+2. 한 번에 하나의 Phase 또는 작은 기능 단위만 구현한다.
+3. DB 변경은 migration 파일로 관리한다.
+4. 인증·권한·AI 한도처럼 서버에서 보장해야 하는 규칙을 클라이언트 코드에만 두지 않는다.
+5. TypeScript의 `any` 사용을 피하고 도메인 타입을 정의한다.
+6. 중요한 정책 로직에는 단위 테스트를 작성한다.
+7. UI 구현 시 로딩, 빈 상태, 오류, 한도 초과 상태를 함께 만든다.
+8. 사용자의 기존 코드나 설정을 임의로 삭제하거나 대규모로 재작성하지 않는다.
+9. README 범위 밖의 기능은 제안할 수 있지만 승인 없이 구현하지 않는다.
+10. 요구사항이 모호하면 합리적으로 추측해 확정하지 말고 질문한다.
+
+## 18. 첫 구현 요청 예시
+
+Cursor에는 전체 구현을 한 번에 요청하지 말고 다음처럼 시작한다.
+
+> README.md를 제품 요구사항의 단일 기준으로 읽어줘. 우선 코드베이스의 현재 상태를 분석하고, README의 Phase 0을 구현하기 위한 구체적인 작업 계획만 제안해줘. 아직 코드를 수정하지 말고, 현재 구조와 충돌하는 요구사항이나 먼저 결정해야 할 항목이 있으면 질문해줘.
+
+계획 확인 후:
+
+> 승인한 계획에 따라 Phase 0만 구현해줘. 기존 파일과 사용자 변경사항을 보존하고, 완료 후 변경 파일, 실행 방법, 테스트 결과, 남은 문제를 정리해줘.
+
+---
+
+현재 MVP의 성공 기준은 사용자가 기록을 쉽게 남기고, 자신의 목표 진행도를 이해하며, AI 분석에서 다음 행동에 도움이 되는 안전한 피드백을 얻는 것이다. 기능 수보다 이 핵심 흐름의 안정성과 신뢰성을 우선한다.
