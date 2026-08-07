@@ -24,3 +24,11 @@ export type WeeklyGoal = {
   recommendationReason: string | null;
   confirmedAt: string;
 };
+
+export type WeeklyProgressView = {
+  weekStart: string;
+  targetCount: number;
+  qualifiedDayCount: number;
+  achievementPercent: number;
+  goalAchieved: boolean;
+};

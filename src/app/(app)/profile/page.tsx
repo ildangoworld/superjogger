@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ProfileSettingsForm } from "@/features/auth/components/profile-settings-form";
+import { NextWeekGoalForm } from "@/features/goals/components/next-week-goal-form";
+import { getGoalsSettings } from "@/features/goals/service";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "프로필" };
@@ -29,19 +31,71 @@ export default async function ProfilePage() {
     );
   }
 
+  let goals;
+  try {
+    goals = await getGoalsSettings(supabase, user.id);
+  } catch {
+    goals = null;
+  }
+
   return (
-    <div className="pt-6">
-      <h1 className="text-pine-900 text-2xl font-semibold">프로필</h1>
-      <p className="text-muted mt-2 text-sm leading-6">
-        닉네임과 AI 추천 방식을 관리할 수 있어요.
-      </p>
-      <div className="mt-8">
-        <ProfileSettingsForm
-          nickname={profile.nickname}
-          recommendationDetail={profile.recommendation_detail}
-          email={user.email}
-        />
+    <div className="flex flex-col gap-10 pt-6 pb-8">
+      <div>
+        <h1 className="text-pine-900 text-2xl font-semibold">프로필</h1>
+        <p className="text-muted mt-2 text-sm leading-6">
+          닉네임, 목표, AI 추천 방식을 관리할 수 있어요.
+        </p>
       </div>
+
+      {goals ? (
+        <>
+          <section className="flex flex-col gap-3">
+            <h2 className="text-pine-900 text-lg font-semibold">조거 등급</h2>
+            <p className="text-pine-900 text-xl font-semibold">
+              {goals.gradeLabel}
+            </p>
+            <p className="text-muted text-sm leading-6">
+              {goals.grade.explanation}
+            </p>
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <h2 className="text-pine-900 text-lg font-semibold">이번 주 목표</h2>
+            {goals.currentWeek ? (
+              <>
+                <p className="text-pine-900 text-2xl font-semibold">
+                  {goals.currentWeek.qualifiedDayCount}/
+                  {goals.currentWeek.targetCount}회
+                </p>
+                <p className="text-muted text-sm leading-6">
+                  이번 주 목표는 확인만 가능하고, 낮추는 변경은 다음 주부터
+                  적용돼요.
+                </p>
+              </>
+            ) : (
+              <p className="text-muted text-sm leading-6">
+                이번 주 확정 목표가 없어요. 아래 다음 주 목표를 먼저
+                정해보세요.
+              </p>
+            )}
+          </section>
+
+          <NextWeekGoalForm
+            nextWeekStart={goals.nextWeek.weekStart}
+            recommendedCount={goals.nextWeek.recommendedCount}
+            recommendationReason={goals.nextWeek.recommendationReason}
+            confirmedCount={goals.nextWeek.targetCount}
+          />
+        </>
+      ) : (
+        <p className="text-muted text-sm">목표 정보를 불러오지 못했어요.</p>
+      )}
+
+      <ProfileSettingsForm
+        nickname={profile.nickname}
+        recommendationDetail={profile.recommendation_detail}
+        email={user.email}
+      />
     </div>
   );
 }

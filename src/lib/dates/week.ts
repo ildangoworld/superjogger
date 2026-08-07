@@ -42,3 +42,29 @@ export function getWeekStartFromLocalDateString(localDate: string): string {
   utcNoon.setUTCDate(utcNoon.getUTCDate() - daysFromMonday);
   return utcNoon.toISOString().slice(0, 10);
 }
+
+export function addDaysToLocalDate(localDate: string, days: number): string {
+  const [year, month, day] = localDate.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days, 12, 0, 0));
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * Completed Mondays from firstWeekStart inclusive up to (but not including) currentWeekStart.
+ */
+export function listCompletedWeekStarts(
+  firstWeekStart: string,
+  currentWeekStart: string,
+): string[] {
+  if (firstWeekStart >= currentWeekStart) {
+    return [];
+  }
+
+  const weeks: string[] = [];
+  let cursor = firstWeekStart;
+  while (cursor < currentWeekStart) {
+    weeks.push(cursor);
+    cursor = addDaysToLocalDate(cursor, 7);
+  }
+  return weeks;
+}
