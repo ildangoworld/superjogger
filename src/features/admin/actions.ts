@@ -7,6 +7,16 @@ import {
   writeAdminAuditLog,
 } from "@/features/admin/admin-db";
 import { requireAdmin } from "@/features/admin/auth";
+import { ensureEnvSuperAdmin } from "@/features/admin/bootstrap";
+import {
+  adminIdToAuthEmail,
+  getEnvAdminCredentials,
+  timingSafeEqualString,
+} from "@/features/admin/credentials";
+import {
+  clearAdminGateCookie,
+  setAdminGateCookie,
+} from "@/features/admin/gate-cookie";
 import { ADMIN_MENU_ITEMS } from "@/features/admin/menu";
 import {
   filterAdminMenuItems,
@@ -18,7 +28,7 @@ import {
 } from "@/features/admin/schemas";
 import type { AdminRole } from "@/features/admin/types";
 import type { ActionResult } from "@/features/auth/actions";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 function formString(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -30,7 +40,7 @@ export async function signInAsAdmin(
   formData: FormData,
 ): Promise<ActionResult> {
   const parsed = adminLoginSchema.safeParse({
-    email: formString(formData, "email"),
+    adminId: formString(formData, "adminId"),
     password: formString(formData, "password"),
   });
 
@@ -41,14 +51,48 @@ export async function signInAsAdmin(
     };
   }
 
+  const authEmail = adminIdToAuthEmail(parsed.data.adminId);
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email: parsed.data.email,
+  await supabase.auth.signOut();
+  await clearAdminGateCookie();
+
+  let { error } = await supabase.auth.signInWithPassword({
+    email: authEmail,
     password: parsed.data.password,
   });
 
   if (error) {
-    return { ok: false, message: "이메일 또는 비밀번호가 올바르지 않아요." };
+    const envCredentials = getEnvAdminCredentials();
+    const matchesEnv =
+      envCredentials &&
+      timingSafeEqualString(
+        parsed.data.adminId.toLowerCase(),
+        envCredentials.id.toLowerCase(),
+      ) &&
+      timingSafeEqualString(parsed.data.password, envCredentials.password);
+
+    if (!matchesEnv) {
+      return { ok: false, message: "아이디 또는 비밀번호가 올바르지 않아요." };
+    }
+
+    try {
+      await ensureEnvSuperAdmin(createServiceRoleClient());
+    } catch (bootstrapError) {
+      const message =
+        bootstrapError instanceof Error
+          ? bootstrapError.message
+          : "관리자 계정을 준비하지 못했어요.";
+      return { ok: false, message };
+    }
+
+    ({ error } = await supabase.auth.signInWithPassword({
+      email: authEmail,
+      password: parsed.data.password,
+    }));
+
+    if (error) {
+      return { ok: false, message: "아이디 또는 비밀번호가 올바르지 않아요." };
+    }
   }
 
   const {
@@ -67,11 +111,14 @@ export async function signInAsAdmin(
 
   if (!adminRow) {
     await supabase.auth.signOut();
+    await clearAdminGateCookie();
     return {
       ok: false,
       message: "관리자 권한이 없는 계정이에요.",
     };
   }
+
+  await setAdminGateCookie(user.id);
 
   const visible = filterAdminMenuItems(
     {
@@ -86,6 +133,7 @@ export async function signInAsAdmin(
 export async function signOutAdmin(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  await clearAdminGateCookie();
   redirect("/admin/login");
 }
 
@@ -133,6 +181,8 @@ export async function changeAdminPassword(
   if (error) {
     return { ok: false, message: error.message };
   }
+
+  await setAdminGateCookie(user.id);
 
   revalidatePath("/admin/settings/account");
   return { ok: true, message: "비밀번호를 변경했어요." };

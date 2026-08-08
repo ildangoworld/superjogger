@@ -1,8 +1,18 @@
 import { z } from "zod";
-import { emailSchema, passwordSchema } from "@/features/auth/schemas";
+import { passwordSchema } from "@/features/auth/schemas";
+
+export const adminIdSchema = z
+  .string()
+  .trim()
+  .min(1, "아이디를 입력해 주세요.")
+  .max(64, "아이디는 64자 이하여야 해요.")
+  .regex(
+    /^[a-zA-Z0-9._-]+$/,
+    "아이디는 영문, 숫자, 점, 밑줄, 하이픈만 사용할 수 있어요.",
+  );
 
 export const adminLoginSchema = z.object({
-  email: emailSchema,
+  adminId: adminIdSchema,
   password: passwordSchema,
 });
 

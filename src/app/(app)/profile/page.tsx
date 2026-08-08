@@ -5,6 +5,8 @@ import { ProfileSettingsForm } from "@/features/auth/components/profile-settings
 import { listMyCrews } from "@/features/crews/service";
 import { NextWeekGoalForm } from "@/features/goals/components/next-week-goal-form";
 import { getGoalsSettings } from "@/features/goals/service";
+import { ProfileInquiriesSection } from "@/features/inquiries/components/profile-inquiries-section";
+import { listMyInquiries } from "@/features/inquiries/queries";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "프로필" };
@@ -45,6 +47,13 @@ export default async function ProfilePage() {
     crews = await listMyCrews(supabase, user.id);
   } catch {
     crews = [];
+  }
+
+  let inquiries: Awaited<ReturnType<typeof listMyInquiries>> = [];
+  try {
+    inquiries = await listMyInquiries(supabase, user.id);
+  } catch {
+    inquiries = [];
   }
 
   return (
@@ -130,6 +139,8 @@ export default async function ProfilePage() {
           크루 현황으로 이동
         </Link>
       </section>
+
+      <ProfileInquiriesSection inquiries={inquiries} />
 
       <ProfileSettingsForm
         nickname={profile.nickname}

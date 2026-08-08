@@ -9,7 +9,7 @@ export default async function AdminAccountPage() {
       <div>
         <h2 className="text-pine-900 text-xl font-semibold">내 계정</h2>
         <p className="text-muted mt-2 text-sm">
-          {admin.email ?? admin.userId} · {admin.role}
+          {admin.loginId ?? admin.email ?? admin.userId} · {admin.role}
         </p>
       </div>
       <div>

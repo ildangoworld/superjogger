@@ -109,7 +109,7 @@ export function AdminShell({ admin, children }: AdminShellProps) {
         <div className="border-line border-t p-3">
           {!desktopCollapsed ? (
             <p className="text-muted mb-2 truncate text-xs">
-              {admin.email ?? admin.userId}
+              {admin.loginId ?? admin.email ?? admin.userId}
               <span className="ml-1">· {admin.role}</span>
             </p>
           ) : null}

@@ -4,24 +4,7 @@ import {
 } from "@/features/analysis/schema";
 import type { AnalysisContext } from "@/features/analysis/context";
 import type { WorkoutAnalysisResult } from "@/features/analysis/types";
-
-function getAiConfig() {
-  const apiKey = process.env.AI_API_KEY;
-  const model = process.env.AI_MODEL;
-  const baseUrl = (process.env.AI_BASE_URL ?? "https://api.openai.com/v1").replace(
-    /\/$/,
-    "",
-  );
-
-  if (!apiKey) {
-    throw new Error("AI_API_KEY is not set");
-  }
-  if (!model) {
-    throw new Error("AI_MODEL is not set");
-  }
-
-  return { apiKey, model, baseUrl };
-}
+import { getAiRuntimeConfig } from "@/features/settings/queries";
 
 function buildSystemPrompt(detail: "LIGHT" | "DETAILED"): string {
   const detailRule =
@@ -45,7 +28,12 @@ function buildSystemPrompt(detail: "LIGHT" | "DETAILED"): string {
 async function requestOnce(
   context: AnalysisContext,
 ): Promise<{ model: string; raw: unknown }> {
-  const { apiKey, model, baseUrl } = getAiConfig();
+  const resolved = await getAiRuntimeConfig();
+  if (!resolved.ok) {
+    throw new Error(resolved.error);
+  }
+
+  const { apiKey, model, baseUrl } = resolved.config;
 
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
@@ -114,13 +102,11 @@ export type ProviderCallResult =
 export async function callWorkoutAnalysisProvider(
   context: AnalysisContext,
 ): Promise<ProviderCallResult> {
-  try {
-    getAiConfig();
-  } catch (error) {
+  const resolved = await getAiRuntimeConfig();
+  if (!resolved.ok) {
     return {
       ok: false,
-      error:
-        error instanceof Error ? error.message : "AI 설정이 올바르지 않아요.",
+      error: resolved.error,
       modelName: null,
       requestSent: false,
     };

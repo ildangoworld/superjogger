@@ -46,6 +46,7 @@ describe("analysis usage counting", () => {
     );
     assert.equal(remainingAnalysisSlots(3), 0);
     assert.equal(remainingAnalysisSlots(1), 2);
+    assert.equal(remainingAnalysisSlots(4, 5), 1);
   });
 
   it("skips auto analysis when the daily limit is exhausted", () => {
@@ -53,7 +54,7 @@ describe("analysis usage counting", () => {
     assert.equal(shouldStartAutoAnalysis(1), true);
   });
 
-  it("never accepts more than 3 reservations under concurrent pressure", () => {
+  it("never accepts more than the configured limit under concurrent pressure", () => {
     const result = simulateAtomicReservations(2, 5);
     assert.equal(result.accepted, 1);
     assert.equal(result.rejected, 4);
@@ -63,6 +64,11 @@ describe("analysis usage counting", () => {
     assert.equal(fromEmpty.accepted, 2);
     assert.equal(fromEmpty.rejected, 0);
     assert.equal(fromEmpty.finalUsed, 2);
+
+    const custom = simulateAtomicReservations(4, 3, 5);
+    assert.equal(custom.accepted, 1);
+    assert.equal(custom.rejected, 2);
+    assert.equal(custom.finalUsed, 5);
   });
 });
 

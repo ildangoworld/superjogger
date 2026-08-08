@@ -489,6 +489,129 @@ export type Database = {
         };
         Relationships: [];
       };
+      legal_documents: {
+        Row: {
+          id: string;
+          doc_type: "TERMS" | "PRIVACY";
+          version: number;
+          content: string;
+          status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+          effective_date: string | null;
+          change_summary: string | null;
+          published_by: string | null;
+          published_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          doc_type: "TERMS" | "PRIVACY";
+          version: number;
+          content: string;
+          status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+          effective_date?: string | null;
+          change_summary?: string | null;
+          published_by?: string | null;
+          published_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          doc_type?: "TERMS" | "PRIVACY";
+          version?: number;
+          content?: string;
+          status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+          effective_date?: string | null;
+          change_summary?: string | null;
+          published_by?: string | null;
+          published_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      user_consents: {
+        Row: {
+          id: string;
+          user_id: string;
+          doc_type: "TERMS" | "PRIVACY";
+          version: number;
+          consented_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          doc_type: "TERMS" | "PRIVACY";
+          version: number;
+          consented_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          doc_type?: "TERMS" | "PRIVACY";
+          version?: number;
+          consented_at?: string;
+        };
+        Relationships: [];
+      };
+      inquiries: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          content: string;
+          status: "OPEN" | "ANSWERED" | "CLOSED";
+          answer_content: string | null;
+          answered_by: string | null;
+          answered_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          content: string;
+          status?: "OPEN" | "ANSWERED" | "CLOSED";
+          answer_content?: string | null;
+          answered_by?: string | null;
+          answered_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          content?: string;
+          status?: "OPEN" | "ANSWERED" | "CLOSED";
+          answer_content?: string | null;
+          answered_by?: string | null;
+          answered_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      app_settings: {
+        Row: {
+          key: string;
+          value: Json;
+          updated_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          key: string;
+          value: Json;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          key?: string;
+          value?: Json;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

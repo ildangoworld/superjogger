@@ -5,6 +5,8 @@ import {
   type WeekOutcome,
 } from "@/features/goals/grade";
 import { JOGGER_GRADE_LABELS } from "@/features/goals/types";
+import { listUserConsents } from "@/features/legal/queries";
+import { getAiDailyLimit } from "@/features/settings/queries";
 import {
   addDaysToLocalDate,
   formatLocalDate,
@@ -45,7 +47,11 @@ export type AdminMemberDetail = {
     name: string;
     role: "OWNER" | "MEMBER";
   }>;
-  consentNote: string;
+  consents: Array<{
+    docType: "TERMS" | "PRIVACY";
+    version: number;
+    consentedAt: string;
+  }>;
 };
 
 async function loadAuthEmailMap(
@@ -184,6 +190,7 @@ export async function getAdminMemberDetail(
     aiTodayResult,
     aiTotalResult,
     membershipResult,
+    consents,
   ] = await Promise.all([
     db
       .from("weekly_goals")
@@ -219,6 +226,7 @@ export async function getAdminMemberDetail(
       .from("crew_members")
       .select("crew_id, role")
       .eq("user_id", userId),
+    listUserConsents(db, userId),
   ]);
 
   if (goalResult.error) {
@@ -340,8 +348,13 @@ export async function getAdminMemberDetail(
     workoutCount: workoutCountResult.count ?? 0,
     aiUsageToday: aiTodayResult.count ?? 0,
     aiUsageTotal: aiTotalResult.count ?? 0,
-    dailyAnalysisLimit: DAILY_ANALYSIS_LIMIT,
+    dailyAnalysisLimit:
+      (await getAiDailyLimit(db).catch(() => DAILY_ANALYSIS_LIMIT)),
     crews,
-    consentNote: "약관·개인정보 동의 버전은 Phase A3에서 제공됩니다.",
+    consents: consents.map((consent) => ({
+      docType: consent.docType,
+      version: consent.version,
+      consentedAt: consent.consentedAt,
+    })),
   };
 }

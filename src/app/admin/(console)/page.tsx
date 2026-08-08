@@ -141,16 +141,43 @@ export default async function AdminDashboardPage() {
         <div>
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-pine-900 text-lg font-semibold">최근 문의</h2>
-            <Link
-              href="/admin/inquiries"
-              className="text-pine-700 text-sm underline-offset-4 hover:underline"
-            >
-              문의 관리
-            </Link>
+            {hasAdminPermission(admin, "inquiries") ? (
+              <Link
+                href="/admin/inquiries"
+                className="text-pine-700 text-sm underline-offset-4 hover:underline"
+              >
+                문의 관리
+              </Link>
+            ) : null}
           </div>
-          <div className="border-line text-muted mt-3 rounded-lg border px-4 py-3 text-sm">
-            문의하기는 Phase A4에서 연결됩니다.
-          </div>
+          <ul className="border-line mt-3 divide-y rounded-lg border">
+            {metrics.recentInquiries.length === 0 ? (
+              <li className="text-muted px-4 py-3 text-sm">
+                아직 문의가 없어요.
+              </li>
+            ) : (
+              metrics.recentInquiries.map((inquiry) => (
+                <li key={inquiry.id} className="px-4 py-3">
+                  {hasAdminPermission(admin, "inquiries") ? (
+                    <Link
+                      href={`/admin/inquiries/${inquiry.id}`}
+                      className="text-pine-900 hover:text-pine-600 font-medium"
+                    >
+                      {inquiry.title}
+                    </Link>
+                  ) : (
+                    <span className="text-pine-900 font-medium">
+                      {inquiry.title}
+                    </span>
+                  )}
+                  <p className="text-muted mt-0.5 text-xs">
+                    {inquiry.authorNickname} ·{" "}
+                    {formatDateTime(inquiry.createdAt)}
+                  </p>
+                </li>
+              ))
+            )}
+          </ul>
         </div>
       </section>
     </div>

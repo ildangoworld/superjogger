@@ -14,11 +14,11 @@ export function AdminLoginForm() {
   return (
     <form action={action} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-pine-900 font-medium">이메일</span>
+        <span className="text-pine-900 font-medium">아이디</span>
         <input
-          name="email"
-          type="email"
-          autoComplete="email"
+          name="adminId"
+          type="text"
+          autoComplete="username"
           required
           className="border-line bg-fog-50 focus:border-pine-500 h-12 rounded-lg border px-3 outline-none"
         />

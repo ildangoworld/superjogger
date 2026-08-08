@@ -1,11 +1,6 @@
 -- Phase A1: admin users and menu permissions
--- Seed the first SUPER admin manually after applying this migration:
---   insert into public.admin_users (user_id, role, permissions)
---   values (
---     '<auth-user-uuid>',
---     'SUPER',
---     array['dashboard','members','crews','inquiries','legal','settings']::text[]
---   );
+-- First SUPER admin is bootstrapped from ADMIN_ID / ADMIN_PASSWORD
+-- on /admin/login (no manual SQL seed required).
 
 create table public.admin_users (
   user_id uuid primary key references auth.users (id) on delete cascade,

@@ -1,5 +1,7 @@
 import { DAILY_ANALYSIS_LIMIT } from "@/features/analysis/schema";
 import type { AdminDb } from "@/features/admin/admin-db";
+import { listRecentAdminInquiries } from "@/features/inquiries/queries";
+import { getAiDailyLimit } from "@/features/settings/queries";
 import {
   addDaysToLocalDate,
   formatLocalDate,
@@ -21,6 +23,13 @@ export type DashboardMetrics = {
     id: string;
     nickname: string;
     createdAt: string;
+  }>;
+  recentInquiries: Array<{
+    id: string;
+    title: string;
+    status: "OPEN" | "ANSWERED" | "CLOSED";
+    createdAt: string;
+    authorNickname: string;
   }>;
 };
 
@@ -44,6 +53,8 @@ export async function getDashboardMetrics(
     activeWritersResult,
     aiUsageResult,
     recentMembersResult,
+    recentInquiries,
+    dailyAnalysisLimit,
   ] = await Promise.all([
     db.from("profiles").select("id", { count: "exact", head: true }),
     db
@@ -72,6 +83,8 @@ export async function getDashboardMetrics(
       .select("id, nickname, created_at")
       .order("created_at", { ascending: false })
       .limit(5),
+    listRecentAdminInquiries(db, 5).catch(() => []),
+    getAiDailyLimit(db).catch(() => DAILY_ANALYSIS_LIMIT),
   ]);
 
   if (totalMembersResult.error) {
@@ -117,7 +130,7 @@ export async function getDashboardMetrics(
 
   let aiLimitReachedToday = 0;
   for (const count of usageByUser.values()) {
-    if (count >= DAILY_ANALYSIS_LIMIT) {
+    if (count >= dailyAnalysisLimit) {
       aiLimitReachedToday += 1;
     }
   }
@@ -131,11 +144,18 @@ export async function getDashboardMetrics(
     aiSuccessToday,
     aiFailedToday,
     aiLimitReachedToday,
-    dailyAnalysisLimit: DAILY_ANALYSIS_LIMIT,
+    dailyAnalysisLimit,
     recentMembers: (recentMembersResult.data ?? []).map((row) => ({
       id: row.id,
       nickname: row.nickname,
       createdAt: row.created_at,
+    })),
+    recentInquiries: recentInquiries.map((row) => ({
+      id: row.id,
+      title: row.title,
+      status: row.status,
+      createdAt: row.createdAt,
+      authorNickname: row.authorNickname,
     })),
   };
 }

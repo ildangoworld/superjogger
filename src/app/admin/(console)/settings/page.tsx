@@ -25,19 +25,29 @@ export default async function AdminSettingsPage() {
           </Link>
         </li>
         {canManageSettings ? (
-          <li className="border-line rounded-lg border px-4 py-3 opacity-70">
-            <p className="text-pine-900 font-medium">AI 설정</p>
-            <p className="text-muted mt-1 text-sm">
-              모델·일일 한도 설정은 Phase A5에서 제공됩니다.
-            </p>
+          <li>
+            <Link
+              href="/admin/settings/ai"
+              className="border-line hover:bg-fog-100 block rounded-lg border px-4 py-3"
+            >
+              <p className="text-pine-900 font-medium">AI 설정</p>
+              <p className="text-muted mt-1 text-sm">
+                모델·일일 한도·Base URL
+              </p>
+            </Link>
           </li>
         ) : null}
         {admin.role === "SUPER" ? (
-          <li className="border-line rounded-lg border px-4 py-3 opacity-70">
-            <p className="text-pine-900 font-medium">관리자 계정 관리</p>
-            <p className="text-muted mt-1 text-sm">
-              관리자 추가·권한 변경은 Phase A5에서 제공됩니다.
-            </p>
+          <li>
+            <Link
+              href="/admin/settings/admins"
+              className="border-line hover:bg-fog-100 block rounded-lg border px-4 py-3"
+            >
+              <p className="text-pine-900 font-medium">관리자 계정 관리</p>
+              <p className="text-muted mt-1 text-sm">
+                관리자 추가·역할·메뉴 권한·해제
+              </p>
+            </Link>
           </li>
         ) : null}
       </ul>

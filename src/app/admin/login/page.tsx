@@ -11,7 +11,7 @@ export default function AdminLoginPage() {
           <div>
             <h1 className="text-pine-900 text-2xl font-semibold">로그인</h1>
             <p className="text-muted mt-2 text-sm">
-              관리자 권한이 있는 계정으로 로그인해 주세요.
+              관리자 아이디와 비밀번호로 로그인해 주세요.
             </p>
           </div>
           <AdminLoginForm />

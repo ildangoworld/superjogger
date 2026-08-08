@@ -12,6 +12,7 @@ import {
   signupSchema,
 } from "@/features/auth/schemas";
 import { recommendWeeklyTarget } from "@/features/goals/recommend";
+import { recordUserConsents } from "@/features/legal/queries";
 import { getWeekStartDate } from "@/lib/dates/week";
 import { getAppUrl } from "@/lib/supabase/env";
 import {
@@ -29,6 +30,11 @@ function formString(formData: FormData, key: string): string {
   return typeof value === "string" ? value : "";
 }
 
+function formChecked(formData: FormData, key: string): boolean {
+  const value = formData.get(key);
+  return value === "on" || value === "true" || value === "1";
+}
+
 export async function signUpWithEmail(
   _prev: ActionResult,
   formData: FormData,
@@ -37,6 +43,10 @@ export async function signUpWithEmail(
     email: formString(formData, "email"),
     password: formString(formData, "password"),
     confirmPassword: formString(formData, "confirmPassword"),
+    agreeTerms: formChecked(formData, "agreeTerms"),
+    agreePrivacy: formChecked(formData, "agreePrivacy"),
+    termsVersion: formString(formData, "termsVersion"),
+    privacyVersion: formString(formData, "privacyVersion"),
   });
 
   if (!parsed.success) {
@@ -52,11 +62,34 @@ export async function signUpWithEmail(
     password: parsed.data.password,
     options: {
       emailRedirectTo: `${getAppUrl()}/auth/callback?next=/onboarding`,
+      data: {
+        consent_terms_version: parsed.data.termsVersion,
+        consent_privacy_version: parsed.data.privacyVersion,
+      },
     },
   });
 
   if (error) {
     return { ok: false, message: error.message };
+  }
+
+  if (data.user) {
+    try {
+      await recordUserConsents({
+        userId: data.user.id,
+        termsVersion: parsed.data.termsVersion,
+        privacyVersion: parsed.data.privacyVersion,
+        client: data.session ? supabase : createServiceRoleClient(),
+      });
+    } catch (consentError) {
+      return {
+        ok: false,
+        message:
+          consentError instanceof Error
+            ? consentError.message
+            : "동의 기록을 저장하지 못했어요.",
+      };
+    }
   }
 
   if (data.session) {

@@ -11,6 +11,7 @@ export type AdminRole = "SUPER" | "STAFF";
 export type AdminUser = {
   userId: string;
   email: string | null;
+  loginId: string | null;
   role: AdminRole;
   permissions: AdminPermissionKey[];
 };

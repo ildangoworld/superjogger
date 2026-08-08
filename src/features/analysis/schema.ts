@@ -40,8 +40,11 @@ export function countUsedAnalysisSlots(
   ).length;
 }
 
-export function remainingAnalysisSlots(used: number): number {
-  return Math.max(0, DAILY_ANALYSIS_LIMIT - used);
+export function remainingAnalysisSlots(
+  used: number,
+  limit: number = DAILY_ANALYSIS_LIMIT,
+): number {
+  return Math.max(0, limit - used);
 }
 
 /** Auto-analysis starts only when at least one daily slot remains. */

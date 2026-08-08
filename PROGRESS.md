@@ -3,7 +3,7 @@
 > 구현 현황의 단일 요약 문서다. 기능을 완료·변경하면 이 파일을 함께 갱신한다.  
 > 제품 요구사항의 기준은 `README.md`다. 이 문서는 진행 상태만 기록한다.
 
-최종 갱신: 2026-08-07
+최종 갱신: 2026-08-08
 
 ## 요약
 
@@ -23,9 +23,9 @@
 |------:|------|------|
 | A1 | 관리자 기반 (계정·권한·접이식 셸·비밀번호 변경) | 완료 |
 | A2 | 대시보드·회원 관리·크루 관리 | 완료 |
-| A3 | 약관·개인정보처리방침 (버전 관리, 사용자 공개 페이지, 가입 동의) | 미착수 |
-| A4 | 문의하기 (사용자 작성, 관리자 답변) | 미착수 |
-| A5 | 설정 (AI 설정 DB화, 관리자 계정 관리)·품질 | 미착수 |
+| A3 | 약관·개인정보처리방침 (버전 관리, 사용자 공개 페이지, 가입 동의) | 완료 |
+| A4 | 문의하기 (사용자 작성, 관리자 답변) | 완료 |
+| A5 | 설정 (AI 설정 DB화, 관리자 계정 관리)·품질 | 완료 |
 
 ## 알려진 이슈 / 수정
 
@@ -106,25 +106,53 @@
 - 내 계정 비밀번호 변경(현재 비밀번호 재확인 후 `updateUser`)
 - 단위 테스트: `src/features/admin/permissions.test.ts`
 - 마이그레이션: `supabase/migrations/20260807050000_phase_a1_admin_users.sql`
-  - 첫 SUPER 관리자는 마이그레이션 주석의 insert로 수동 시드
+  - 첫 SUPER 관리자는 `ADMIN_ID` / `ADMIN_PASSWORD`로 `/admin/login` 부트스트랩
 
 ## Phase A2 — 대시보드·회원·크루
 
-- 대시보드: 회원·운동·AI 사용 지표, 최근 가입 회원 (문의는 A4 안내)
+- 대시보드: 회원·운동·AI 사용 지표, 최근 가입 회원, 최근 문의
 - 회원 목록/상세/닉네임 확인 후 탈퇴 처리 (`auth.admin.deleteUser`)
 - 크루 목록/상세/초대 코드 재발급/이름 확인 후 삭제
 - 파괴적 조치는 `admin_audit_logs`에 처리자·시각 기록
 - 통증·메모·AI 분석 본문은 관리자 화면에 노출하지 않음
 - 마이그레이션: `supabase/migrations/20260807060000_phase_a2_admin_ops.sql`
 
+## Phase A3 — 약관·개인정보처리방침
+
+- `legal_documents` (초안·게시·이력, 시행일 예약) + `user_consents`
+- 공개 페이지 `/terms`, `/privacy` (현재 적용 버전·이전/예정 버전 목록)
+- 회원가입 필수 동의 체크 + 동의 버전 기록 (이메일·Google)
+- 관리자 콘텐츠 관리: 초안 작성·수정·시행일 지정 게시, 게시 후 수정 불가
+- 회원 상세에서 동의 버전 확인, welcome/인증 화면 약관 링크
+- 단위 테스트: `src/features/legal/publish.test.ts`
+- 마이그레이션: `supabase/migrations/20260807070000_phase_a3_legal.sql`
+  - `docs/legal/` 초안을 버전 1로 시드(`[운영자 입력 필요]`는 운영 전 확정)
+
+## Phase A4 — 문의하기
+
+- `inquiries` (OPEN/ANSWERED/CLOSED) + RLS(본인 조회·작성만, 답변은 service role)
+- 프로필 문의 작성·내 문의 목록, `/profile/inquiries/[id]` 상세·답변 확인
+- 관리자 문의 목록(상태 필터)·상세·답변 작성/수정(상태 ANSWERED 자동 전환)
+- 대시보드 최근 문의 5건 바로가기
+- 단위 테스트: `src/features/inquiries/status.test.ts`
+- 마이그레이션: `supabase/migrations/20260807080000_phase_a4_inquiries.sql`
+
+## Phase A5 — 설정·품질
+
+- `app_settings` (`ai_model`, `ai_daily_limit`, `ai_base_url`) + RLS(인증 사용자 조회, 쓰기는 service role)
+- AI 설정 화면: env보다 DB 값 우선, API 키는 env 전용
+- `reserve_ai_analysis_slot`이 `ai_daily_limit`을 읽어 한도 검증
+- SUPER 전용 관리자 계정 관리(추가·역할·권한·해제), 마지막 SUPER 보호
+- 단위 테스트: `src/features/settings/resolve.test.ts`
+- 마이그레이션: `supabase/migrations/20260807090000_phase_a5_settings.sql`
+
 ## 다음에 할 일
 
-- 관리자 사이트 Phase A3 착수 (약관·개인정보처리방침)
-- `admin_users` / `admin_audit_logs` 마이그레이션 적용 후 첫 SUPER 관리자 수동 시드
-- 약관·개인정보처리방침 초안(`docs/legal/`)의 `[운영자 입력 필요]` 항목 확정
+- `app_settings` / A3·A4 마이그레이션 적용 및 약관 플레이스홀더 확정
+- `admin_users` / `admin_audit_logs` 마이그레이션 적용 후 `.env.local`에 `ADMIN_ID` / `ADMIN_PASSWORD` 설정하고 `/admin/login`으로 SUPER 부트스트랩
 - Vercel 프로젝트 연결 및 운영 환경변수 등록
 - Supabase Site URL / Redirect URLs를 프로덕션 도메인으로 설정
-- Phase 4·5·A1·A2 마이그레이션이 원격 DB에 적용됐는지 확인
+- Phase 4·5·A1–A5 마이그레이션이 원격 DB에 적용됐는지 확인
 
 ## 로컬 확인
 
@@ -135,7 +163,7 @@ npm run lint
 npm run build
 ```
 
-Supabase SQL Editor에서 Phase 1·2·4·5·A1·A2 마이그레이션을 순서대로 적용한다.  
+Supabase SQL Editor에서 Phase 1·2·4·5·A1·A2·A3·A4·A5 마이그레이션을 순서대로 적용한다.  
 환경변수는 `.env.example`을 참고해 `.env.local`(및 Vercel)에 설정한다.
 
 ## 문서 갱신 규칙

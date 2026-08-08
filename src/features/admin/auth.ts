@@ -3,12 +3,27 @@ import {
   hasAdminPermission,
   normalizePermissions,
 } from "@/features/admin/permissions";
+import {
+  readAdminGateFromCookies,
+  verifyAdminGateValue,
+} from "@/features/admin/gate-cookie";
 import type {
   AdminPermissionKey,
   AdminRole,
   AdminUser,
 } from "@/features/admin/types";
 import { createClient } from "@/lib/supabase/server";
+
+function loginIdFromUser(user: {
+  email?: string | null;
+  user_metadata?: Record<string, unknown>;
+}): string | null {
+  const fromMeta = user.user_metadata?.admin_login_id;
+  if (typeof fromMeta === "string" && fromMeta.length > 0) {
+    return fromMeta;
+  }
+  return null;
+}
 
 export async function getAdminUser(): Promise<AdminUser | null> {
   const supabase = await createClient();
@@ -17,6 +32,14 @@ export async function getAdminUser(): Promise<AdminUser | null> {
   } = await supabase.auth.getUser();
 
   if (!user) {
+    return null;
+  }
+
+  const gateOk = await verifyAdminGateValue(
+    await readAdminGateFromCookies(),
+    user.id,
+  );
+  if (!gateOk) {
     return null;
   }
 
@@ -33,6 +56,7 @@ export async function getAdminUser(): Promise<AdminUser | null> {
   return {
     userId: data.user_id,
     email: user.email ?? null,
+    loginId: loginIdFromUser(user),
     role: data.role as AdminRole,
     permissions: normalizePermissions(data.permissions),
   };
@@ -48,6 +72,13 @@ export async function requireAdmin(): Promise<AdminUser> {
     if (!user) {
       redirect("/admin/login");
     }
+    const gateOk = await verifyAdminGateValue(
+      await readAdminGateFromCookies(),
+      user.id,
+    );
+    if (!gateOk) {
+      redirect("/admin/login");
+    }
     redirect("/admin/forbidden");
   }
   return admin;
@@ -58,6 +89,14 @@ export async function requireAdminPermission(
 ): Promise<AdminUser> {
   const admin = await requireAdmin();
   if (!hasAdminPermission(admin, permission)) {
+    redirect("/admin/forbidden");
+  }
+  return admin;
+}
+
+export async function requireSuperAdmin(): Promise<AdminUser> {
+  const admin = await requireAdmin();
+  if (admin.role !== "SUPER") {
     redirect("/admin/forbidden");
   }
   return admin;

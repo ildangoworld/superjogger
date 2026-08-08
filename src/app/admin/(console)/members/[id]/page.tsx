@@ -101,7 +101,23 @@ export default async function AdminMemberDetailPage({
 
       <section>
         <h3 className="text-pine-900 text-base font-semibold">동의 기록</h3>
-        <p className="text-muted mt-2 text-sm">{member.consentNote}</p>
+        {member.consents.length === 0 ? (
+          <p className="text-muted mt-2 text-sm">동의 기록이 없어요.</p>
+        ) : (
+          <ul className="mt-2 flex flex-col gap-2">
+            {member.consents.map((consent) => (
+              <li
+                key={`${consent.docType}-${consent.version}-${consent.consentedAt}`}
+                className="text-muted text-sm"
+              >
+                {consent.docType === "TERMS"
+                  ? "이용약관"
+                  : "개인정보처리방침"}{" "}
+                v{consent.version} · {formatDateTime(consent.consentedAt)}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section>

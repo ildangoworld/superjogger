@@ -49,6 +49,21 @@ export function adminPageTitle(pathname: string): string {
   if (pathname === "/admin" || pathname === "/admin/") {
     return "대시보드";
   }
+  if (pathname.startsWith("/admin/legal/")) {
+    return "콘텐츠 관리";
+  }
+  if (pathname.startsWith("/admin/inquiries/")) {
+    return "문의 관리";
+  }
+  if (pathname === "/admin/settings/ai") {
+    return "AI 설정";
+  }
+  if (pathname === "/admin/settings/admins") {
+    return "관리자 계정 관리";
+  }
+  if (pathname === "/admin/settings/account") {
+    return "내 계정";
+  }
   const exact = ADMIN_MENU_ITEMS.find((item) => item.href === pathname);
   if (exact) {
     return exact.label;

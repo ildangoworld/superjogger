@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/brand/wordmark";
+import { LegalFooterLinks } from "@/features/legal/components/legal-footer-links";
 
 const principles = [
   {
@@ -94,11 +95,14 @@ export default function WelcomePage() {
         </section>
       </main>
       <footer className="border-line border-t">
-        <div className="mx-auto flex w-full max-w-md items-center justify-between gap-4 px-6 py-6">
-          <Wordmark className="text-sm" />
-          <p className="text-fog-500 text-xs leading-5">
-            기록을 해석하고 방향을 제안할 뿐, 의료적 진단을 하지 않아요.
-          </p>
+        <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-6 py-6">
+          <div className="flex items-center justify-between gap-4">
+            <Wordmark className="text-sm" />
+            <p className="text-fog-500 text-xs leading-5">
+              기록을 해석하고 방향을 제안할 뿐, 의료적 진단을 하지 않아요.
+            </p>
+          </div>
+          <LegalFooterLinks />
         </div>
       </footer>
     </div>

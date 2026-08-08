@@ -16,6 +16,16 @@ export const signupSchema = z
     email: emailSchema,
     password: passwordSchema,
     confirmPassword: z.string(),
+    agreeTerms: z
+      .boolean()
+      .refine((value) => value, { message: "이용약관에 동의해 주세요." }),
+    agreePrivacy: z
+      .boolean()
+      .refine((value) => value, {
+        message: "개인정보처리방침에 동의해 주세요.",
+      }),
+    termsVersion: z.coerce.number().int().min(1),
+    privacyVersion: z.coerce.number().int().min(1),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "비밀번호가 일치하지 않아요.",

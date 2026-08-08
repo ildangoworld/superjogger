@@ -29,3 +29,19 @@ export function getSupabaseServiceRoleKey(): string {
 export function getAppUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }
+
+export function getAdminId(): string {
+  const id = process.env.ADMIN_ID?.trim();
+  if (!id) {
+    throw new Error("ADMIN_ID is not set");
+  }
+  return id;
+}
+
+export function getAdminPassword(): string {
+  const password = process.env.ADMIN_PASSWORD;
+  if (!password) {
+    throw new Error("ADMIN_PASSWORD is not set");
+  }
+  return password;
+}

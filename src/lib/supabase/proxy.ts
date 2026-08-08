@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { hasValidAdminGate } from "@/features/admin/gate-cookie";
 import {
   getSupabasePublishableKey,
   getSupabaseUrl,
@@ -12,12 +13,23 @@ const PUBLIC_PREFIXES = [
   "/forgot-password",
   "/reset-password",
   "/auth",
+  "/terms",
+  "/privacy",
   "/admin/login",
 ];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
+function isLegalPublicPath(pathname: string): boolean {
+  return (
+    pathname === "/terms" ||
+    pathname.startsWith("/terms/") ||
+    pathname === "/privacy" ||
+    pathname.startsWith("/privacy/")
   );
 }
 
@@ -81,7 +93,11 @@ export async function updateSession(request: NextRequest) {
 
   if (isAdminPath(pathname)) {
     if (pathname === "/admin/login" || pathname.startsWith("/admin/login/")) {
-      if (user && (await isAdminUser(supabase, user.id))) {
+      if (
+        user &&
+        (await isAdminUser(supabase, user.id)) &&
+        (await hasValidAdminGate(request, user.id))
+      ) {
         const url = request.nextUrl.clone();
         url.pathname = "/admin";
         url.search = "";
@@ -91,7 +107,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     if (pathname === "/admin/forbidden") {
-      if (!user) {
+      if (!user || !(await hasValidAdminGate(request, user.id))) {
         const url = request.nextUrl.clone();
         url.pathname = "/admin/login";
         return NextResponse.redirect(url);
@@ -99,7 +115,7 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse;
     }
 
-    if (!user) {
+    if (!user || !(await hasValidAdminGate(request, user.id))) {
       const url = request.nextUrl.clone();
       url.pathname = "/admin/login";
       url.searchParams.set("next", pathname);
@@ -130,7 +146,7 @@ export async function updateSession(request: NextRequest) {
       user.user_metadata?.onboarding_completed,
     );
 
-    if (pathname === "/reset-password") {
+    if (pathname === "/reset-password" || isLegalPublicPath(pathname)) {
       return supabaseResponse;
     }
 

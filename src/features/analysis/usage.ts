@@ -6,6 +6,7 @@ import type {
   AnalysisTriggerType,
   AnalysisUsageStatus,
 } from "@/features/analysis/types";
+import { getAiDailyLimit } from "@/features/settings/queries";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
@@ -58,8 +59,11 @@ export async function getRemainingAnalysisSlots(
   userId: string,
   usageLocalDate: string,
 ): Promise<number> {
-  const used = await getUsedAnalysisCount(supabase, userId, usageLocalDate);
-  return remainingAnalysisSlots(used);
+  const [used, limit] = await Promise.all([
+    getUsedAnalysisCount(supabase, userId, usageLocalDate),
+    getAiDailyLimit(supabase).catch(() => DAILY_ANALYSIS_LIMIT),
+  ]);
+  return remainingAnalysisSlots(used, limit);
 }
 
 export async function reserveAnalysisSlot(
