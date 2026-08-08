@@ -83,6 +83,9 @@ export default async function WorkoutDetailPage({
     getRemainingAnalysisSlots(supabase, user.id, todayLocal),
   ]);
 
+  const expectPending =
+    query.analysis === "pending" || analysis?.status === "PENDING";
+
   return (
     <div className="pt-6 pb-8">
       <p className="text-muted text-sm">
@@ -180,7 +183,7 @@ export default async function WorkoutDetailPage({
         ) : null}
         {workout.cadence != null ? (
           <div>
-            <dt className="text-muted">케이던스</dt>
+            <dt className="text-muted">평균 케이던스</dt>
             <dd className="text-pine-900 mt-1 font-medium">{workout.cadence}</dd>
           </div>
         ) : null}
@@ -206,6 +209,7 @@ export default async function WorkoutDetailPage({
         workoutId={workout.id}
         remainingSlots={remainingSlots}
         limitExceededOnSave={query.analysis === "limit"}
+        expectPending={expectPending}
         analysis={
           analysis
             ? {

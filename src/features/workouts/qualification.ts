@@ -87,3 +87,23 @@ export function secondsToDurationParts(totalSeconds: number): {
   const seconds = totalSeconds % 60;
   return { hours, minutes, seconds };
 }
+
+export function stepCountFromCadence(
+  cadence: number,
+  durationSeconds: number,
+): number | null {
+  if (durationSeconds <= 0 || cadence < 0) {
+    return null;
+  }
+  return Math.round((cadence * durationSeconds) / 60);
+}
+
+export function cadenceFromStepCount(
+  stepCount: number,
+  durationSeconds: number,
+): number | null {
+  if (durationSeconds <= 0 || stepCount < 0) {
+    return null;
+  }
+  return Math.round((stepCount * 60) / durationSeconds);
+}

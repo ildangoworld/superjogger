@@ -45,9 +45,6 @@ export default async function RecordPage() {
   return (
     <div className="pt-6">
       <h1 className="text-pine-900 text-2xl font-semibold">기록하기</h1>
-      <p className="text-muted mt-2 text-sm leading-6">
-        달리기, 걷기, 걷기·달리기 혼합 모두 같은 기준으로 인정돼요.
-      </p>
       <div className="mt-8">
         <WorkoutForm mode="create" initial={initial} />
       </div>

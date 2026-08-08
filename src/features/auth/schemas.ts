@@ -89,5 +89,8 @@ export const onboardingSchema = z.object({
 
 export const profileUpdateSchema = z.object({
   nickname: nicknameSchema,
+});
+
+export const recommendationDetailUpdateSchema = z.object({
   recommendationDetail: recommendationDetailSchema,
 });

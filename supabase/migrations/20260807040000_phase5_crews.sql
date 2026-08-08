@@ -29,17 +29,49 @@ for each row execute function public.set_updated_at();
 alter table public.crews enable row level security;
 alter table public.crew_members enable row level security;
 
+-- SECURITY DEFINER helpers avoid RLS recursion between crews <-> crew_members.
+create or replace function public.is_crew_member(p_crew_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.crew_members
+    where crew_id = p_crew_id
+      and user_id = auth.uid()
+  );
+$$;
+
+create or replace function public.is_crew_owner(p_crew_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.crews
+    where id = p_crew_id
+      and owner_id = auth.uid()
+  );
+$$;
+
+alter function public.is_crew_member(uuid) owner to postgres;
+alter function public.is_crew_owner(uuid) owner to postgres;
+
+revoke all on function public.is_crew_member(uuid) from public;
+revoke all on function public.is_crew_owner(uuid) from public;
+grant execute on function public.is_crew_member(uuid) to authenticated, service_role;
+grant execute on function public.is_crew_owner(uuid) to authenticated, service_role;
+
 create policy "crews_select_member"
 on public.crews for select
 to authenticated
-using (
-  exists (
-    select 1
-    from public.crew_members m
-    where m.crew_id = crews.id
-      and m.user_id = auth.uid()
-  )
-);
+using (public.is_crew_member(id));
 
 create policy "crews_insert_own"
 on public.crews for insert
@@ -60,14 +92,7 @@ using (auth.uid() = owner_id);
 create policy "crew_members_select_same_crew"
 on public.crew_members for select
 to authenticated
-using (
-  exists (
-    select 1
-    from public.crew_members self
-    where self.crew_id = crew_members.crew_id
-      and self.user_id = auth.uid()
-  )
-);
+using (public.is_crew_member(crew_id));
 
 -- Membership inserts go through SECURITY DEFINER RPCs only.
 
@@ -76,33 +101,14 @@ on public.crew_members for delete
 to authenticated
 using (
   auth.uid() = user_id
-  or exists (
-    select 1
-    from public.crews c
-    where c.id = crew_members.crew_id
-      and c.owner_id = auth.uid()
-  )
+  or public.is_crew_owner(crew_id)
 );
 
 create policy "crew_members_update_owner"
 on public.crew_members for update
 to authenticated
-using (
-  exists (
-    select 1
-    from public.crews c
-    where c.id = crew_members.crew_id
-      and c.owner_id = auth.uid()
-  )
-)
-with check (
-  exists (
-    select 1
-    from public.crews c
-    where c.id = crew_members.crew_id
-      and c.owner_id = auth.uid()
-  )
-);
+using (public.is_crew_owner(crew_id))
+with check (public.is_crew_owner(crew_id));
 
 grant select, insert, update, delete on table public.crews to authenticated;
 grant select, insert, update, delete on table public.crew_members to authenticated;

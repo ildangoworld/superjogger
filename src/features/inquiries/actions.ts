@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import type { ActionResult } from "@/features/auth/actions";
 import { createInquirySchema } from "@/features/inquiries/schemas";
 import { createClient } from "@/lib/supabase/server";
@@ -54,5 +53,5 @@ export async function createInquiry(
   revalidatePath("/profile");
   revalidatePath("/admin/inquiries");
   revalidatePath("/admin");
-  redirect(`/profile/inquiries/${data.id}`);
+  return { ok: true, message: "문의를 등록했어요." };
 }

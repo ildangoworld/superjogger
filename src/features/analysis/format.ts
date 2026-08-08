@@ -10,7 +10,7 @@ export function analysisStatusLabel(
 
   switch (status) {
     case "PENDING":
-      return "대기";
+      return "분석 중";
     case "COMPLETED":
       return "완료";
     case "FAILED":

@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   assignCountsForDailyGoal,
+  cadenceFromStepCount,
   durationPartsToSeconds,
   kilometersToMeters,
   qualifiesByRule,
+  stepCountFromCadence,
 } from "./qualification.ts";
 import {
   formatLocalDate,
@@ -111,6 +113,26 @@ describe("distance and duration helpers", () => {
 
   it("converts 10 minutes from parts", () => {
     assert.equal(durationPartsToSeconds(0, 10, 0), 600);
+  });
+});
+
+describe("cadence and step count", () => {
+  it("derives step count from cadence and duration", () => {
+    assert.equal(stepCountFromCadence(180, 600), 1800);
+  });
+
+  it("derives cadence from step count and duration", () => {
+    assert.equal(cadenceFromStepCount(1800, 600), 180);
+  });
+
+  it("returns null when duration is zero", () => {
+    assert.equal(stepCountFromCadence(180, 0), null);
+    assert.equal(cadenceFromStepCount(1800, 0), null);
+  });
+
+  it("rounds to integers", () => {
+    assert.equal(stepCountFromCadence(161, 90), 242);
+    assert.equal(cadenceFromStepCount(1000, 370), 162);
   });
 });
 

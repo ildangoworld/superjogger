@@ -1,8 +1,12 @@
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { runWorkoutAnalysis } from "@/features/analysis/run-analysis";
-import { createClient } from "@/lib/supabase/server";
+import { PROMPT_VERSION } from "@/features/analysis/schema";
+import { reserveAnalysisSlot } from "@/features/analysis/usage";
+import { formatLocalDate } from "@/lib/dates/week";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 export type ReanalyzeActionResult = {
   ok: boolean;
@@ -46,32 +50,56 @@ export async function reanalyzeWorkout(
     return { ok: false, message: "운동 기록을 찾지 못했어요." };
   }
 
-  const result = await runWorkoutAnalysis({
-    supabase,
+  const requestKey = `reanalyze:${workoutId}:${crypto.randomUUID()}`;
+  const reserved = await reserveAnalysisSlot(supabase, {
     userId: user.id,
     workoutId,
-    timezone: profile.timezone,
+    usageLocalDate: formatLocalDate(profile.timezone),
     triggerType: "REANALYZE",
-    requestKey: `reanalyze:${workoutId}:${crypto.randomUUID()}`,
+    requestKey,
+    promptVersion: PROMPT_VERSION,
   });
 
-  if (!result.ok) {
-    if (result.reason === "LIMIT") {
+  if (!reserved.ok) {
+    if (reserved.reason === "LIMIT") {
       return {
         ok: false,
         message:
-          "오늘 제공되는 AI 분석 3회를 모두 사용했어요. 내일부터 다시 분석을 이용할 수 있어요.",
+          "오늘 제공되는 AI 분석 횟수를 모두 사용했어요. 내일부터 다시 분석을 이용할 수 있어요.",
       };
     }
     return {
       ok: false,
-      message: result.message ?? "다시 분석하지 못했어요.",
+      message: reserved.message ?? "다시 분석하지 못했어요.",
     };
   }
 
-  revalidatePath(`/workouts/${workoutId}`);
-  revalidatePath("/workouts");
-  revalidatePath("/");
+  const userId = user.id;
+  const timezone = profile.timezone;
 
-  return { ok: true, message: "분석을 업데이트했어요." };
+  after(async () => {
+    try {
+      const admin = createServiceRoleClient();
+      await runWorkoutAnalysis({
+        supabase: admin,
+        userId,
+        workoutId,
+        timezone,
+        triggerType: "REANALYZE",
+        requestKey,
+      });
+      revalidatePath(`/workouts/${workoutId}`);
+      revalidatePath("/workouts");
+      revalidatePath("/");
+    } catch {
+      // Keep the pending/failed analysis row; user can retry.
+    }
+  });
+
+  revalidatePath(`/workouts/${workoutId}`);
+
+  return {
+    ok: true,
+    message: "분석을 시작했어요. 완료되면 이 화면에 결과가 나타나요.",
+  };
 }

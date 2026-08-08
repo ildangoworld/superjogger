@@ -7,9 +7,11 @@ import { reanalyzeWorkout } from "@/features/analysis/actions";
 export function ReanalyzeButton({
   workoutId,
   remainingSlots,
+  disabled,
 }: {
   workoutId: string;
   remainingSlots: number;
+  disabled?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -19,7 +21,7 @@ export function ReanalyzeButton({
     <div className="flex flex-col gap-2">
       <button
         type="button"
-        disabled={pending || remainingSlots <= 0}
+        disabled={pending || disabled || remainingSlots <= 0}
         onClick={() => {
           setMessage(null);
           startTransition(async () => {
@@ -27,7 +29,7 @@ export function ReanalyzeButton({
             setMessage(
               result.message ??
                 (result.ok
-                  ? "분석을 업데이트했어요."
+                  ? "분석을 시작했어요."
                   : "다시 분석하지 못했어요."),
             );
             if (result.ok) {
@@ -37,7 +39,7 @@ export function ReanalyzeButton({
         }}
         className="border-line text-pine-800 h-11 rounded-lg border text-sm font-medium disabled:opacity-60"
       >
-        {pending ? "재분석 중" : "다시 분석하기"}
+        {pending || disabled ? "분석 중" : "다시 분석하기"}
       </button>
       <p className="text-muted text-xs">오늘 남은 분석 {remainingSlots}회</p>
       {message ? <p className="text-pine-800 text-sm">{message}</p> : null}

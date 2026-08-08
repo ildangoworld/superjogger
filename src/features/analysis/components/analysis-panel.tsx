@@ -1,4 +1,5 @@
 import { analysisStatusLabel } from "@/features/analysis/format";
+import { AnalysisStatusPoller } from "@/features/analysis/components/analysis-status-poller";
 import { ReanalyzeButton } from "@/features/analysis/components/reanalyze-button";
 import type { AnalysisStatus, RiskLevel } from "@/features/analysis/types";
 
@@ -17,13 +18,16 @@ export function AnalysisPanel({
   analysis,
   remainingSlots,
   limitExceededOnSave,
+  expectPending,
 }: {
   workoutId: string;
   analysis: AnalysisPanelData | null;
   remainingSlots: number;
   limitExceededOnSave?: boolean;
+  expectPending?: boolean;
 }) {
   const status = analysis?.status ?? null;
+  const isAnalyzing = status === "PENDING" || (Boolean(expectPending) && !status);
   const showCompletedFields =
     analysis &&
     (status === "COMPLETED" || status === "STALE") &&
@@ -31,25 +35,30 @@ export function AnalysisPanel({
 
   return (
     <section className="mt-8 flex flex-col gap-4">
+      <AnalysisStatusPoller status={status} expectPending={expectPending} />
       <div>
         <h2 className="text-pine-900 text-lg font-semibold">AI 분석</h2>
         <p className="text-muted mt-1 text-sm">
-          {analysisStatusLabel(status, {
-            limitExceeded: Boolean(limitExceededOnSave) && !analysis,
-          })}
+          {isAnalyzing
+            ? "분석 중"
+            : analysisStatusLabel(status, {
+                limitExceeded: Boolean(limitExceededOnSave) && !analysis,
+              })}
         </p>
       </div>
 
       {limitExceededOnSave && !analysis ? (
         <p className="border-dawn-300 bg-dawn-50 text-dawn-900 rounded-lg border px-3 py-2 text-sm">
-          오늘 제공되는 AI 분석 3회를 모두 사용했어요. 운동 기록은 정상적으로
+          오늘 제공되는 AI 분석 횟수를 모두 사용했어요. 운동 기록은 정상적으로
           저장됐어요.
         </p>
       ) : null}
 
-      {status === "PENDING" ? (
-        <p className="text-muted text-sm leading-6">
-          분석을 준비 중이에요. 잠시 후 이 화면을 새로고침해 보세요.
+      {isAnalyzing ? (
+        <p className="border-pine-200 bg-pine-50 text-pine-800 rounded-lg border px-3 py-2 text-sm leading-6">
+          AI가 운동을 분석하고 있어요. 결과가 오면 이 영역에 자동으로
+          표시돼요. 다른 화면을 보다가 다시 들어와도 분석이 끝나면 내용이
+          업데이트되어 있어요.
         </p>
       ) : null}
 
@@ -106,13 +115,17 @@ export function AnalysisPanel({
         </dl>
       ) : null}
 
-      {!analysis && !limitExceededOnSave ? (
+      {!analysis && !limitExceededOnSave && !isAnalyzing ? (
         <p className="text-muted text-sm leading-6">
           아직 분석 결과가 없어요. 남은 횟수가 있으면 다시 분석할 수 있어요.
         </p>
       ) : null}
 
-      <ReanalyzeButton workoutId={workoutId} remainingSlots={remainingSlots} />
+      <ReanalyzeButton
+        workoutId={workoutId}
+        remainingSlots={remainingSlots}
+        disabled={isAnalyzing}
+      />
     </section>
   );
 }

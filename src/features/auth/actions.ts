@@ -9,6 +9,7 @@ import {
   loginSchema,
   onboardingSchema,
   profileUpdateSchema,
+  recommendationDetailUpdateSchema,
   resetPasswordSchema,
   signupSchema,
 } from "@/features/auth/schemas";
@@ -392,13 +393,108 @@ export async function completeOnboarding(
   redirect("/");
 }
 
+const AVATAR_MAX_BYTES = 100 * 1024;
+
+const AVATAR_MIME_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+function avatarPathFromPublicUrl(
+  url: string | null,
+  userId: string,
+): string | null {
+  if (!url) {
+    return null;
+  }
+  const marker = "/storage/v1/object/public/avatars/";
+  const index = url.indexOf(marker);
+  if (index === -1) {
+    return null;
+  }
+  const path = decodeURIComponent(url.slice(index + marker.length));
+  return path.startsWith(`${userId}/`) ? path : null;
+}
+
+export async function updateAvatar(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const file = formData.get("avatar");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, message: "이미지 파일을 선택해 주세요." };
+  }
+
+  const extension = AVATAR_MIME_EXTENSIONS[file.type];
+  if (!extension) {
+    return {
+      ok: false,
+      message: "JPG, PNG, WEBP, GIF 이미지만 올릴 수 있어요.",
+    };
+  }
+
+  if (file.size > AVATAR_MAX_BYTES) {
+    return { ok: false, message: "이미지는 100KB 이하여야 해요." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "로그인이 필요해요." };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const path = `${user.id}/avatar-${Date.now()}.${extension}`;
+  const { error: uploadError } = await supabase.storage
+    .from("avatars")
+    .upload(path, file, { contentType: file.type });
+
+  if (uploadError) {
+    return { ok: false, message: uploadError.message };
+  }
+
+  const { data: publicUrl } = supabase.storage
+    .from("avatars")
+    .getPublicUrl(path);
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ avatar_url: publicUrl.publicUrl })
+    .eq("id", user.id);
+
+  if (updateError) {
+    await supabase.storage.from("avatars").remove([path]);
+    return { ok: false, message: updateError.message };
+  }
+
+  const previousPath = avatarPathFromPublicUrl(
+    profile?.avatar_url ?? null,
+    user.id,
+  );
+  if (previousPath) {
+    await supabase.storage.from("avatars").remove([previousPath]);
+  }
+
+  revalidatePath("/profile");
+  return { ok: true, message: "프로필 사진을 바꿨어요." };
+}
+
 export async function updateProfileSettings(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
   const parsed = profileUpdateSchema.safeParse({
     nickname: formString(formData, "nickname"),
-    recommendationDetail: formString(formData, "recommendationDetail"),
   });
 
   if (!parsed.success) {
@@ -421,7 +517,6 @@ export async function updateProfileSettings(
     .from("profiles")
     .update({
       nickname: parsed.data.nickname,
-      recommendation_detail: parsed.data.recommendationDetail,
     })
     .eq("id", user.id);
 
@@ -434,6 +529,45 @@ export async function updateProfileSettings(
 
   revalidatePath("/profile");
   return { ok: true, message: "프로필을 저장했어요." };
+}
+
+export async function updateRecommendationDetail(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = recommendationDetailUpdateSchema.safeParse({
+    recommendationDetail: formString(formData, "recommendationDetail"),
+  });
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요.",
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "로그인이 필요해요." };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      recommendation_detail: parsed.data.recommendationDetail,
+    })
+    .eq("id", user.id);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath("/profile");
+  return { ok: true, message: "AI 추천 상세도를 저장했어요." };
 }
 
 export async function deleteAccount(): Promise<ActionResult> {

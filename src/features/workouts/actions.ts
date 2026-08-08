@@ -8,8 +8,14 @@ import {
   runWorkoutAnalysis,
 } from "@/features/analysis/run-analysis";
 import { hasCoreAnalysisFieldsChanged } from "@/features/analysis/stale";
-import { shouldStartAutoAnalysis } from "@/features/analysis/schema";
-import { getRemainingAnalysisSlots } from "@/features/analysis/usage";
+import {
+  PROMPT_VERSION,
+  shouldStartAutoAnalysis,
+} from "@/features/analysis/schema";
+import {
+  getRemainingAnalysisSlots,
+  reserveAnalysisSlot,
+} from "@/features/analysis/usage";
 import {
   durationPartsToSeconds,
   kilometersToMeters,
@@ -210,31 +216,49 @@ export async function createWorkout(
     formatLocalDate(timezone),
   );
 
-  if (shouldStartAutoAnalysis(remaining)) {
+  let analysisQuery = "";
+  if (!shouldStartAutoAnalysis(remaining)) {
+    analysisQuery = "&analysis=limit";
+  } else {
     const workoutId = created.id;
     const userId = user.id;
     const userTimezone = timezone;
-    after(async () => {
-      try {
-        const admin = createServiceRoleClient();
-        await runWorkoutAnalysis({
-          supabase: admin,
-          userId,
-          workoutId,
-          timezone: userTimezone,
-          triggerType: "AUTO",
-          requestKey: `auto:${workoutId}`,
-        });
-        revalidatePath(`/workouts/${workoutId}`);
-        revalidatePath("/workouts");
-        revalidatePath("/");
-      } catch {
-        // Analysis must never undo a successful workout save.
-      }
+    const requestKey = `auto:${workoutId}`;
+
+    const reserved = await reserveAnalysisSlot(supabase, {
+      userId,
+      workoutId,
+      usageLocalDate: formatLocalDate(timezone),
+      triggerType: "AUTO",
+      requestKey,
+      promptVersion: PROMPT_VERSION,
     });
+
+    if (!reserved.ok && reserved.reason === "LIMIT") {
+      analysisQuery = "&analysis=limit";
+    } else {
+      analysisQuery = "&analysis=pending";
+      after(async () => {
+        try {
+          const admin = createServiceRoleClient();
+          await runWorkoutAnalysis({
+            supabase: admin,
+            userId,
+            workoutId,
+            timezone: userTimezone,
+            triggerType: "AUTO",
+            requestKey,
+          });
+          revalidatePath(`/workouts/${workoutId}`);
+          revalidatePath("/workouts");
+          revalidatePath("/");
+        } catch {
+          // Analysis must never undo a successful workout save.
+        }
+      });
+    }
   }
 
-  const analysisQuery = remaining > 0 ? "" : "&analysis=limit";
   redirect(
     `/workouts/${created.id}?saved=1${similar ? "&similar=1" : ""}${analysisQuery}`,
   );
