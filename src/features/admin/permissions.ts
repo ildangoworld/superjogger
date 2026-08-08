@@ -42,13 +42,38 @@ export function isSuperAdmin(role: AdminRole): boolean {
   return role === "SUPER";
 }
 
-export function filterAdminMenuItems<
-  T extends { permission: AdminPermissionKey | null },
->(admin: Pick<AdminUser, "role" | "permissions">, items: T[]): T[] {
-  return items.filter((item) => {
-    if (item.permission === null) {
-      return true;
+export function filterAdminMenuItems<T extends AdminMenuItemLike>(
+  admin: Pick<AdminUser, "role" | "permissions">,
+  items: T[],
+): T[] {
+  return items.flatMap((item) => {
+    if (item.requiresSuper && admin.role !== "SUPER") {
+      return [];
     }
-    return hasAdminPermission(admin, item.permission);
+
+    const children = item.children
+      ? filterAdminMenuItems(admin, item.children)
+      : undefined;
+
+    const allowedByPermission =
+      item.permission === null || hasAdminPermission(admin, item.permission);
+    const hasVisibleChildren = Boolean(children && children.length > 0);
+
+    if (!allowedByPermission && !hasVisibleChildren) {
+      return [];
+    }
+
+    return [
+      {
+        ...item,
+        ...(children ? { children } : {}),
+      },
+    ];
   });
 }
+
+type AdminMenuItemLike = {
+  permission: AdminPermissionKey | null;
+  requiresSuper?: boolean;
+  children?: AdminMenuItemLike[];
+};

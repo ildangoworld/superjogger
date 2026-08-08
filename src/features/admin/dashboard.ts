@@ -1,5 +1,9 @@
 import { DAILY_ANALYSIS_LIMIT } from "@/features/analysis/schema";
 import type { AdminDb } from "@/features/admin/admin-db";
+import {
+  listAdminUserIds,
+  notInUserIdsFilter,
+} from "@/features/admin/admin-ids";
 import { listRecentAdminInquiries } from "@/features/inquiries/queries";
 import { getAiDailyLimit } from "@/features/settings/queries";
 import {
@@ -44,6 +48,32 @@ export async function getDashboardMetrics(
   const weekAgo = addDaysToLocalDate(today, -6);
   const todayStartIso = startOfDayIso(today);
   const weekStartIso = startOfDayIso(weekAgo);
+  const adminIds = await listAdminUserIds(db);
+  const excludeAdmins = notInUserIdsFilter(adminIds);
+
+  let totalMembersQuery = db
+    .from("profiles")
+    .select("id", { count: "exact", head: true });
+  let newTodayQuery = db
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", todayStartIso);
+  let newWeekQuery = db
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", weekStartIso);
+  let recentMembersQuery = db
+    .from("profiles")
+    .select("id, nickname, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (excludeAdmins) {
+    totalMembersQuery = totalMembersQuery.not("id", "in", excludeAdmins);
+    newTodayQuery = newTodayQuery.not("id", "in", excludeAdmins);
+    newWeekQuery = newWeekQuery.not("id", "in", excludeAdmins);
+    recentMembersQuery = recentMembersQuery.not("id", "in", excludeAdmins);
+  }
 
   const [
     totalMembersResult,
@@ -56,15 +86,9 @@ export async function getDashboardMetrics(
     recentInquiries,
     dailyAnalysisLimit,
   ] = await Promise.all([
-    db.from("profiles").select("id", { count: "exact", head: true }),
-    db
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", todayStartIso),
-    db
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", weekStartIso),
+    totalMembersQuery,
+    newTodayQuery,
+    newWeekQuery,
     db
       .from("workouts")
       .select("id", { count: "exact", head: true })
@@ -78,11 +102,7 @@ export async function getDashboardMetrics(
       .from("ai_analysis_usage")
       .select("user_id, status")
       .eq("usage_local_date", today),
-    db
-      .from("profiles")
-      .select("id, nickname, created_at")
-      .order("created_at", { ascending: false })
-      .limit(5),
+    recentMembersQuery,
     listRecentAdminInquiries(db, 5).catch(() => []),
     getAiDailyLimit(db).catch(() => DAILY_ANALYSIS_LIMIT),
   ]);
@@ -110,7 +130,9 @@ export async function getDashboardMetrics(
   }
 
   const activeWritersLast7Days = new Set(
-    (activeWritersResult.data ?? []).map((row) => row.user_id),
+    (activeWritersResult.data ?? [])
+      .map((row) => row.user_id)
+      .filter((userId) => !adminIds.has(userId)),
   ).size;
 
   const usageByUser = new Map<string, number>();
@@ -118,6 +140,9 @@ export async function getDashboardMetrics(
   let aiFailedToday = 0;
 
   for (const row of aiUsageResult.data ?? []) {
+    if (adminIds.has(row.user_id)) {
+      continue;
+    }
     if (row.status === "CONSUMED") {
       aiSuccessToday += 1;
       usageByUser.set(row.user_id, (usageByUser.get(row.user_id) ?? 0) + 1);

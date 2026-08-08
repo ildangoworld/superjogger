@@ -8,6 +8,18 @@ export function adminIdToAuthEmail(adminId: string): string {
   return `admin+${adminId.toLowerCase()}@${ADMIN_AUTH_EMAIL_DOMAIN}`;
 }
 
+export function isAdminOnlyAuthUser(user: {
+  email?: string | null;
+  user_metadata?: Record<string, unknown>;
+}): boolean {
+  const loginId = user.user_metadata?.admin_login_id;
+  if (typeof loginId === "string" && loginId.length > 0) {
+    return true;
+  }
+  const email = user.email?.toLowerCase() ?? "";
+  return email.endsWith(`@${ADMIN_AUTH_EMAIL_DOMAIN}`);
+}
+
 export function getEnvAdminCredentials(): {
   id: string;
   password: string;

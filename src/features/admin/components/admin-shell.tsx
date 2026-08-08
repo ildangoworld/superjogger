@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signOutAdmin } from "@/features/admin/actions";
 import { ADMIN_MENU_ITEMS, adminPageTitle } from "@/features/admin/menu";
 import { filterAdminMenuItems } from "@/features/admin/permissions";
-import type { AdminUser } from "@/features/admin/types";
+import type { AdminMenuItem, AdminUser } from "@/features/admin/types";
 import { Wordmark } from "@/components/brand/wordmark";
 
 type AdminShellProps = {
@@ -14,10 +14,89 @@ type AdminShellProps = {
   children: React.ReactNode;
 };
 
+function splitHref(href: string): { path: string; hash: string } {
+  const [path = href, hash = ""] = href.split("#");
+  return { path, hash: hash ? `#${hash}` : "" };
+}
+
+function isMenuActive(
+  href: string,
+  pathname: string,
+  hash: string,
+  options?: { exactPath?: boolean },
+): boolean {
+  const { path, hash: itemHash } = splitHref(href);
+  if (path === "/admin") {
+    return pathname === "/admin" || pathname === "/admin/";
+  }
+  if (options?.exactPath) {
+    if (pathname !== path) {
+      return false;
+    }
+    if (itemHash) {
+      return hash === itemHash;
+    }
+    return true;
+  }
+  if (itemHash) {
+    return pathname === path && hash === itemHash;
+  }
+  return pathname === path || pathname.startsWith(`${path}/`);
+}
+
+function MenuLink({
+  item,
+  pathname,
+  hash,
+  desktopCollapsed,
+  indented,
+  onNavigate,
+}: {
+  item: AdminMenuItem;
+  pathname: string;
+  hash: string;
+  desktopCollapsed: boolean;
+  indented: boolean;
+  onNavigate: () => void;
+}) {
+  const active = isMenuActive(item.href, pathname, hash, {
+    exactPath: indented,
+  });
+
+  return (
+    <Link
+      href={item.href}
+      title={item.label}
+      onClick={onNavigate}
+      className={[
+        "rounded-lg py-2.5 text-sm font-medium transition-colors",
+        indented ? "px-3 pl-6" : "px-3",
+        active
+          ? "bg-pine-800 text-fog-50"
+          : "text-pine-900 hover:bg-fog-200",
+        desktopCollapsed ? "lg:px-2 lg:text-center lg:pl-2" : "",
+      ].join(" ")}
+    >
+      <span className={desktopCollapsed ? "lg:hidden" : ""}>{item.label}</span>
+      <span className={desktopCollapsed ? "hidden lg:inline" : "hidden"}>
+        {item.label.slice(0, 1)}
+      </span>
+    </Link>
+  );
+}
+
 export function AdminShell({ admin, children }: AdminShellProps) {
   const pathname = usePathname();
+  const [hash, setHash] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+
+  useEffect(() => {
+    const syncHash = () => setHash(window.location.hash);
+    syncHash();
+    window.addEventListener("hashchange", syncHash);
+    return () => window.removeEventListener("hashchange", syncHash);
+  }, [pathname]);
 
   const items = filterAdminMenuItems(admin, ADMIN_MENU_ITEMS);
   const title = adminPageTitle(pathname);
@@ -71,39 +150,31 @@ export function AdminShell({ admin, children }: AdminShellProps) {
           aria-label="관리자 메뉴"
           className="flex flex-1 flex-col gap-1 overflow-y-auto p-2"
         >
-          {items.map((item) => {
-            const active =
-              item.href === "/admin"
-                ? pathname === "/admin"
-                : pathname === item.href ||
-                  pathname.startsWith(`${item.href}/`);
-            return (
-              <Link
-                key={item.key}
-                href={item.href}
-                title={item.label}
-                onClick={() => setMobileOpen(false)}
-                className={[
-                  "rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-pine-800 text-fog-50"
-                    : "text-pine-900 hover:bg-fog-200",
-                  desktopCollapsed ? "lg:px-2 lg:text-center" : "",
-                ].join(" ")}
-              >
-                <span className={desktopCollapsed ? "lg:hidden" : ""}>
-                  {item.label}
-                </span>
-                <span
-                  className={
-                    desktopCollapsed ? "hidden lg:inline" : "hidden"
-                  }
-                >
-                  {item.label.slice(0, 1)}
-                </span>
-              </Link>
-            );
-          })}
+          {items.map((item) => (
+            <div key={item.key} className="flex flex-col gap-0.5">
+              <MenuLink
+                item={item}
+                pathname={pathname}
+                hash={hash}
+                desktopCollapsed={desktopCollapsed}
+                indented={false}
+                onNavigate={() => setMobileOpen(false)}
+              />
+              {!desktopCollapsed && item.children
+                ? item.children.map((child) => (
+                    <MenuLink
+                      key={child.key}
+                      item={child}
+                      pathname={pathname}
+                      hash={hash}
+                      desktopCollapsed={desktopCollapsed}
+                      indented
+                      onNavigate={() => setMobileOpen(false)}
+                    />
+                  ))
+                : null}
+            </div>
+          ))}
         </nav>
 
         <div className="border-line border-t p-3">

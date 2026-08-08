@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isAdminOnlyAuthUser } from "@/features/admin/credentials";
 import { hasValidAdminGate } from "@/features/admin/gate-cookie";
 import {
   getSupabasePublishableKey,
@@ -86,17 +87,24 @@ export async function updateSession(request: NextRequest) {
   );
 
   const {
-    data: { user },
+    data: { user: authUser },
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
 
+  // Admin-only Auth accounts share cookies with the member app; keep them for
+  // /admin but never treat them as logged-in members on the user site.
+  const user =
+    authUser && isAdminOnlyAuthUser(authUser) && !isAdminPath(pathname)
+      ? null
+      : authUser;
+
   if (isAdminPath(pathname)) {
     if (pathname === "/admin/login" || pathname.startsWith("/admin/login/")) {
       if (
-        user &&
-        (await isAdminUser(supabase, user.id)) &&
-        (await hasValidAdminGate(request, user.id))
+        authUser &&
+        (await isAdminUser(supabase, authUser.id)) &&
+        (await hasValidAdminGate(request, authUser.id))
       ) {
         const url = request.nextUrl.clone();
         url.pathname = "/admin";
@@ -107,7 +115,10 @@ export async function updateSession(request: NextRequest) {
     }
 
     if (pathname === "/admin/forbidden") {
-      if (!user || !(await hasValidAdminGate(request, user.id))) {
+      if (
+        !authUser ||
+        !(await hasValidAdminGate(request, authUser.id))
+      ) {
         const url = request.nextUrl.clone();
         url.pathname = "/admin/login";
         return NextResponse.redirect(url);
@@ -115,14 +126,17 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse;
     }
 
-    if (!user || !(await hasValidAdminGate(request, user.id))) {
+    if (
+      !authUser ||
+      !(await hasValidAdminGate(request, authUser.id))
+    ) {
       const url = request.nextUrl.clone();
       url.pathname = "/admin/login";
       url.searchParams.set("next", pathname);
       return NextResponse.redirect(url);
     }
 
-    if (!(await isAdminUser(supabase, user.id))) {
+    if (!(await isAdminUser(supabase, authUser.id))) {
       const url = request.nextUrl.clone();
       url.pathname = "/admin/forbidden";
       url.search = "";

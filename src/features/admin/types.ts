@@ -17,8 +17,10 @@ export type AdminUser = {
 };
 
 export type AdminMenuItem = {
-  key: AdminPermissionKey | "account";
+  key: string;
   href: string;
   label: string;
   permission: AdminPermissionKey | null;
+  requiresSuper?: boolean;
+  children?: AdminMenuItem[];
 };

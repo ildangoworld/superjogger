@@ -37,9 +37,55 @@ describe("admin permissions", () => {
     const items = [
       { key: "dashboard", permission: "dashboard" as const },
       { key: "members", permission: "members" as const },
-      { key: "account", permission: null },
+      {
+        key: "settings",
+        permission: "settings" as const,
+        children: [
+          { key: "settings-ai", permission: "settings" as const },
+          {
+            key: "settings-admins",
+            permission: "settings" as const,
+            requiresSuper: true,
+          },
+          { key: "settings-account", permission: null },
+        ],
+      },
     ];
-    const visible = filterAdminMenuItems(admin, items).map((item) => item.key);
-    assert.deepEqual(visible, ["dashboard", "account"]);
+    const visible = filterAdminMenuItems(admin, items);
+    assert.deepEqual(
+      visible.map((item) => item.key),
+      ["dashboard", "settings"],
+    );
+    assert.deepEqual(
+      visible[1]?.children?.map((item) => item.key),
+      ["settings-account"],
+    );
+  });
+
+  it("hides SUPER-only menu children from STAFF", () => {
+    const admin = {
+      role: "STAFF" as const,
+      permissions: ["settings" as const],
+    };
+    const items = [
+      {
+        key: "settings",
+        permission: "settings" as const,
+        children: [
+          { key: "settings-ai", permission: "settings" as const },
+          {
+            key: "settings-admins",
+            permission: "settings" as const,
+            requiresSuper: true,
+          },
+          { key: "settings-account", permission: null },
+        ],
+      },
+    ];
+    const visible = filterAdminMenuItems(admin, items);
+    assert.deepEqual(
+      visible[0]?.children?.map((item) => item.key),
+      ["settings-ai", "settings-account"],
+    );
   });
 });

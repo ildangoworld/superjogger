@@ -51,7 +51,11 @@ export default async function AdminLegalPage() {
           "";
 
         return (
-          <section key={docType} className="flex flex-col gap-4">
+          <section
+            key={docType}
+            id={docType === "TERMS" ? "terms" : "privacy"}
+            className="flex scroll-mt-20 flex-col gap-4"
+          >
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h3 className="text-pine-900 text-lg font-semibold">

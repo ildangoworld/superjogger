@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isAdminOnlyAuthUser } from "@/features/admin/credentials";
 import { ACCOUNT_DELETION_POLICY } from "@/features/auth/account-deletion";
 import {
   forgotPasswordSchema,
@@ -53,6 +54,13 @@ export async function signUpWithEmail(
     return {
       ok: false,
       message: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요.",
+    };
+  }
+
+  if (isAdminOnlyAuthUser({ email: parsed.data.email })) {
+    return {
+      ok: false,
+      message: "관리자 계정은 사용자 사이트에 가입할 수 없어요.",
     };
   }
 
@@ -134,6 +142,14 @@ export async function signInWithEmail(
 
   if (!user) {
     return { ok: false, message: "로그인에 실패했어요. 다시 시도해 주세요." };
+  }
+
+  if (isAdminOnlyAuthUser(user)) {
+    await supabase.auth.signOut();
+    return {
+      ok: false,
+      message: "관리자 계정은 사용자 사이트에 로그인할 수 없어요.",
+    };
   }
 
   const { data: profile } = await supabase

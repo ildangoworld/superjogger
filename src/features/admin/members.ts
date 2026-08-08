@@ -1,6 +1,10 @@
 import { DAILY_ANALYSIS_LIMIT } from "@/features/analysis/schema";
 import type { AdminDb } from "@/features/admin/admin-db";
 import {
+  listAdminUserIds,
+  notInUserIdsFilter,
+} from "@/features/admin/admin-ids";
+import {
   calculateJoggerGrade,
   type WeekOutcome,
 } from "@/features/goals/grade";
@@ -83,13 +87,21 @@ export async function listAdminMembers(
   query: string,
 ): Promise<AdminMemberListItem[]> {
   const q = query.trim().toLowerCase();
-  const emailMap = await loadAuthEmailMap(db);
+  const [emailMap, adminIds] = await Promise.all([
+    loadAuthEmailMap(db),
+    listAdminUserIds(db),
+  ]);
+  const excludeAdmins = notInUserIdsFilter(adminIds);
 
   let profileQuery = db
     .from("profiles")
     .select("id, nickname, created_at, onboarding_completed")
     .order("created_at", { ascending: false })
     .limit(200);
+
+  if (excludeAdmins) {
+    profileQuery = profileQuery.not("id", "in", excludeAdmins);
+  }
 
   if (q) {
     profileQuery = profileQuery.ilike("nickname", `%${q}%`);
@@ -105,7 +117,10 @@ export async function listAdminMembers(
   if (q) {
     const nicknameMatches = new Set(rows.map((row) => row.id));
     const emailMatches = [...emailMap.entries()]
-      .filter(([, email]) => email?.toLowerCase().includes(q))
+      .filter(
+        ([id, email]) =>
+          !adminIds.has(id) && email?.toLowerCase().includes(q),
+      )
       .map(([id]) => id);
 
     const missingIds = emailMatches.filter((id) => !nicknameMatches.has(id));
@@ -158,6 +173,11 @@ export async function getAdminMemberDetail(
   db: AdminDb,
   userId: string,
 ): Promise<AdminMemberDetail | null> {
+  const adminIds = await listAdminUserIds(db);
+  if (adminIds.has(userId)) {
+    return null;
+  }
+
   const { data: profile, error } = await db
     .from("profiles")
     .select(

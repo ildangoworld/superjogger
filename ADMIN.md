@@ -124,6 +124,7 @@
 - 라우트: `src/app/admin/` (사용자용 `(app)` 셸과 분리된 전용 레이아웃)
 - 레이아웃: 접이식 사이드바(데스크톱 고정, 모바일 오버레이), 상단에 현재 메뉴 경로 표시
 - 데이터 접근: 관리자 페이지·액션은 서버에서 `admin_users` 검증 후 `createServiceRoleClient()`로 조회한다. 새 테이블(`admin_users`, `app_settings`, `legal_documents`, `user_consents`, `inquiries`)에는 RLS를 적용하되 관리자 쓰기는 service role 경로로만 수행한다.
+- 관리자 전용 Auth 계정(`admin_login_id` / `@admin.internal`)은 회원 목록·지표에서 제외하고, 사용자 사이트에서는 비로그인으로 취급한다.
 - DB 변경은 migration 파일로 관리한다.
 
 ## 7. 구현 순서
