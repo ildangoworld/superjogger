@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Wordmark } from "@/components/brand/wordmark";
+import { LegalBackButton } from "@/features/legal/components/legal-back-button";
 import { LegalFooterLinks } from "@/features/legal/components/legal-footer-links";
 import { LegalMarkdown } from "@/features/legal/components/legal-markdown";
 import { LEGAL_DOC_LABELS, LEGAL_DOC_PATHS } from "@/features/legal/constants";
@@ -24,7 +25,12 @@ export async function LegalPublicPage({ docType, version }: Props) {
   return (
     <div className="atmosphere flex min-h-dvh flex-1 flex-col">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 py-10">
-        <Wordmark className="text-xl" />
+        <header className="flex flex-col gap-4">
+          <LegalBackButton />
+          <Link href="/" className="self-start" aria-label="홈으로 이동">
+            <Wordmark className="text-xl" />
+          </Link>
+        </header>
         <main className="mt-10 flex flex-1 flex-col">
           <h1 className="text-pine-900 text-2xl font-semibold">
             {LEGAL_DOC_LABELS[docType]}

@@ -9,7 +9,7 @@ const principles = [
   },
   {
     title: "걷기도 똑같이 가치 있어요",
-    body: "달리기, 걷기, 걷기·달리기 혼합 모두 같은 기준으로 인정해요.",
+    body: "달리기, 걷기 모두 같은 기준으로 인정해요.",
   },
   {
     title: "AI는 코치, 판정은 규칙",
@@ -95,8 +95,8 @@ export default function WelcomePage() {
         </section>
       </main>
       <footer className="border-line border-t">
-        <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-6 py-6">
-          <div className="flex items-center justify-between gap-4">
+        <div className="mx-auto flex w-full max-w-md flex-col gap-1.5 px-6 py-6">
+          <div className="flex flex-col gap-0.5">
             <Wordmark className="text-sm" />
             <p className="text-fog-500 text-xs leading-5">
               기록을 해석하고 방향을 제안할 뿐, 의료적 진단을 하지 않아요.
