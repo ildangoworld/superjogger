@@ -1,11 +1,20 @@
-import { weekSucceeded } from "../goals/grade.ts";
-import { addDaysToLocalDate } from "../../lib/dates/week.ts";
-
 export type WeekGoalOutcome = {
   weekStart: string;
   goalCount: number;
   qualifiedDayCount: number;
 };
+
+function weekSucceeded(outcome: WeekGoalOutcome): boolean {
+  return (
+    outcome.goalCount > 0 && outcome.qualifiedDayCount >= outcome.goalCount
+  );
+}
+
+function addDaysToLocalDate(localDate: string, days: number): string {
+  const [year, month, day] = localDate.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days, 12, 0, 0));
+  return date.toISOString().slice(0, 10);
+}
 
 /**
  * Counts consecutive weeks where the weekly goal was met.
