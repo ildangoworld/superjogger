@@ -64,7 +64,7 @@ export async function buildAnalysisContext(
     supabase
       .from("workouts")
       .select(
-        "id, category, local_date, duration_seconds, distance_meters, perceived_exertion, condition_score, has_pain, pain_area, qualifies_by_rule, counts_for_daily_goal",
+        "id, category, local_date, duration_seconds, distance_meters, perceived_exertion, condition_score, has_pain, pain_area, average_heart_rate, cadence, qualifies_by_rule, counts_for_daily_goal",
       )
       .eq("user_id", userId)
       .neq("id", workoutId)

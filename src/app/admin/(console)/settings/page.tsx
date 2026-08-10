@@ -37,6 +37,19 @@ export default async function AdminSettingsPage() {
             </Link>
           </li>
         ) : null}
+        {canManageSettings ? (
+          <li>
+            <Link
+              href="/admin/settings/prompts"
+              className="border-line hover:bg-fog-100 block rounded-lg border px-4 py-3"
+            >
+              <p className="text-pine-900 font-medium">AI 프롬프트</p>
+              <p className="text-muted mt-1 text-sm">
+                운동 분석 시스템·사용자 프롬프트
+              </p>
+            </Link>
+          </li>
+        ) : null}
         {admin.role === "SUPER" ? (
           <li>
             <Link

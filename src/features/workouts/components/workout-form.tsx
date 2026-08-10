@@ -407,6 +407,9 @@ export function WorkoutForm({ mode, workoutId, initial }: Props) {
     initial.perceivedExertion,
   );
   const [conditionScore, setConditionScore] = useState(initial.conditionScore);
+  const [averageHeartRate, setAverageHeartRate] = useState(
+    initial.averageHeartRate != null ? String(initial.averageHeartRate) : "",
+  );
   const [cadence, setCadence] = useState(
     initial.cadence != null ? String(initial.cadence) : "",
   );
@@ -470,6 +473,10 @@ export function WorkoutForm({ mode, workoutId, initial }: Props) {
         }
       }
     }
+  }
+
+  function handleAverageHeartRateChange(event: ChangeEvent<HTMLInputElement>) {
+    setAverageHeartRate(event.target.value.replace(/\D/g, ""));
   }
 
   function handleCadenceChange(event: ChangeEvent<HTMLInputElement>) {
@@ -549,7 +556,7 @@ export function WorkoutForm({ mode, workoutId, initial }: Props) {
 
       <ScoreChoiceField
         name="perceivedExertion"
-        label="체감 강도"
+        label="스스로 느낀 강도"
         options={PERCEIVED_EXERTION_OPTIONS}
         value={perceivedExertion}
         onChange={setPerceivedExertion}
@@ -618,11 +625,12 @@ export function WorkoutForm({ mode, workoutId, initial }: Props) {
           <label className={FIELD_GROUP_CLASS}>
             <span className={FIELD_TITLE_CLASS}>평균 심박수 (bpm)</span>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               name="averageHeartRate"
-              min={30}
-              max={250}
-              defaultValue={initial.averageHeartRate ?? ""}
+              value={averageHeartRate}
+              onFocus={(event) => event.currentTarget.select()}
+              onChange={handleAverageHeartRateChange}
               className="border-line bg-fog-50 focus:border-pine-500 h-12 rounded-lg border px-3 outline-none"
             />
           </label>

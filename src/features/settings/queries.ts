@@ -1,10 +1,12 @@
 import type { Json } from "@/lib/database.types";
+import { normalizeAiPromptSettings } from "@/features/analysis/prompts";
 import {
   normalizeAiAppSettings,
   resolveAiRuntimeConfig,
 } from "@/features/settings/resolve";
 import type {
   AiAppSettings,
+  AiPromptSettings,
   AiRuntimeConfig,
   AppSettingRow,
 } from "@/features/settings/types";
@@ -23,6 +25,16 @@ function rowsToSettings(rows: AppSettingRow[]): AiAppSettings {
   });
 }
 
+function rowsToPromptSettings(rows: AppSettingRow[]): AiPromptSettings {
+  const map = new Map(rows.map((row) => [row.key, row.value]));
+  return normalizeAiPromptSettings({
+    systemPrompt: map.get("ai_system_prompt"),
+    detailRuleDetailed: map.get("ai_detail_rule_detailed"),
+    detailRuleLight: map.get("ai_detail_rule_light"),
+    userInstruction: map.get("ai_user_instruction"),
+  });
+}
+
 export async function loadAiAppSettings(
   client?: DbClient,
 ): Promise<AiAppSettings> {
@@ -37,6 +49,27 @@ export async function loadAiAppSettings(
   }
 
   return rowsToSettings((data ?? []) as AppSettingRow[]);
+}
+
+export async function loadAiPromptSettings(
+  client?: DbClient,
+): Promise<AiPromptSettings> {
+  const db = client ?? (await createClient());
+  const { data, error } = await db
+    .from("app_settings")
+    .select("key, value, updated_by, updated_at")
+    .in("key", [
+      "ai_system_prompt",
+      "ai_detail_rule_detailed",
+      "ai_detail_rule_light",
+      "ai_user_instruction",
+    ]);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowsToPromptSettings((data ?? []) as AppSettingRow[]);
 }
 
 export async function getAiDailyLimit(client?: DbClient): Promise<number> {
@@ -64,6 +97,14 @@ export async function getAiRuntimeConfig(): Promise<
   });
 }
 
+export async function getAiPromptConfig(): Promise<AiPromptSettings> {
+  try {
+    return await loadAiPromptSettings(createServiceRoleClient());
+  } catch {
+    return normalizeAiPromptSettings({});
+  }
+}
+
 export async function saveAiAppSettings(input: {
   settings: AiAppSettings;
   updatedBy: string;
@@ -87,6 +128,51 @@ export async function saveAiAppSettings(input: {
     {
       key: "ai_base_url",
       value: input.settings.aiBaseUrl as unknown as Json,
+      updated_by: input.updatedBy,
+    },
+  ];
+
+  const { error } = await db.from("app_settings").upsert(rows, {
+    onConflict: "key",
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function saveAiPromptSettings(input: {
+  settings: AiPromptSettings;
+  updatedBy: string;
+}): Promise<void> {
+  const db = createServiceRoleClient();
+  const rows: Array<{
+    key:
+      | "ai_system_prompt"
+      | "ai_detail_rule_detailed"
+      | "ai_detail_rule_light"
+      | "ai_user_instruction";
+    value: Json;
+    updated_by: string;
+  }> = [
+    {
+      key: "ai_system_prompt",
+      value: input.settings.systemPrompt as unknown as Json,
+      updated_by: input.updatedBy,
+    },
+    {
+      key: "ai_detail_rule_detailed",
+      value: input.settings.detailRuleDetailed as unknown as Json,
+      updated_by: input.updatedBy,
+    },
+    {
+      key: "ai_detail_rule_light",
+      value: input.settings.detailRuleLight as unknown as Json,
+      updated_by: input.updatedBy,
+    },
+    {
+      key: "ai_user_instruction",
+      value: input.settings.userInstruction as unknown as Json,
       updated_by: input.updatedBy,
     },
   ];

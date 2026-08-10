@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { StickyBackBar } from "@/components/layout/sticky-back-bar";
 import { WorkoutForm } from "@/features/workouts/components/workout-form";
 import { buildEditValues } from "@/features/workouts/components/workout-form-values";
 import { createClient } from "@/lib/supabase/server";
@@ -74,15 +74,9 @@ export default async function EditWorkoutPage({
   });
 
   return (
-    <div className="pt-6">
-      <p className="text-muted text-sm">
-        <Link href={`/workouts/${workout.id}`} className="hover:underline">
-          상세
-        </Link>
-        <span aria-hidden> / </span>
-        수정
-      </p>
-      <h1 className="text-pine-900 mt-3 text-2xl font-semibold">기록 수정</h1>
+    <div>
+      <StickyBackBar fallbackHref={`/workouts/${workout.id}`} />
+      <h1 className="text-pine-900 mt-5 text-2xl font-semibold">기록 수정</h1>
       <p className="text-muted mt-2 text-sm leading-6">
         수정하면 목표 반영이 다시 계산돼요. AI 분석은 자동으로 다시 하지
         않아요.

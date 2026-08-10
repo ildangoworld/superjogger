@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { StickyBackBar } from "@/components/layout/sticky-back-bar";
 import { AnalysisPanel } from "@/features/analysis/components/analysis-panel";
 import { getRemainingAnalysisSlots } from "@/features/analysis/usage";
 import { DeleteWorkoutButton } from "@/features/workouts/components/delete-workout-button";
@@ -87,15 +88,9 @@ export default async function WorkoutDetailPage({
     query.analysis === "pending" || analysis?.status === "PENDING";
 
   return (
-    <div className="pt-6 pb-8">
-      <p className="text-muted text-sm">
-        <Link href="/workouts" className="hover:underline">
-          기록
-        </Link>
-        <span aria-hidden> / </span>
-        상세
-      </p>
-      <h1 className="text-pine-900 mt-3 text-2xl font-semibold">
+    <div className="pb-8">
+      <StickyBackBar fallbackHref="/workouts" />
+      <h1 className="text-pine-900 mt-5 text-2xl font-semibold">
         {formatCategory(workout.category)}
       </h1>
       <p className="text-muted mt-2 text-sm">
@@ -152,7 +147,7 @@ export default async function WorkoutDetailPage({
           </dd>
         </div>
         <div>
-          <dt className="text-muted">체감 강도</dt>
+          <dt className="text-muted">스스로 느낀 강도</dt>
           <dd className="text-pine-900 mt-1 font-medium">
             {workout.perceived_exertion} / 5
           </dd>

@@ -58,6 +58,12 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
         permission: "settings",
       },
       {
+        key: "settings-prompts",
+        href: "/admin/settings/prompts",
+        label: "AI 프롬프트",
+        permission: "settings",
+      },
+      {
         key: "settings-admins",
         href: "/admin/settings/admins",
         label: "관리자 계정 관리",

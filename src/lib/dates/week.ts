@@ -49,6 +49,60 @@ export function addDaysToLocalDate(localDate: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** YYYY-MM from YYYY-MM-DD */
+export function getYearMonthFromLocalDate(localDate: string): string {
+  return localDate.slice(0, 7);
+}
+
+export function addMonthsToYearMonth(yearMonth: string, delta: number): string {
+  const [year, month] = yearMonth.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1 + delta, 1, 12, 0, 0));
+  const nextYear = date.getUTCFullYear();
+  const nextMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${nextYear}-${nextMonth}`;
+}
+
+/**
+ * Monday-start calendar cells for a YYYY-MM month.
+ * Leading/trailing days from adjacent months are included so the grid is complete.
+ */
+export function buildMonthCalendarDays(yearMonth: string): Array<{
+  localDate: string;
+  day: number;
+  inMonth: boolean;
+}> {
+  const [year, month] = yearMonth.split("-").map(Number);
+  const firstOfMonth = `${yearMonth}-01`;
+  const gridStart = getWeekStartFromLocalDateString(firstOfMonth);
+  const daysInMonth = new Date(Date.UTC(year, month, 0, 12, 0, 0)).getUTCDate();
+  const lastOfMonth = `${yearMonth}-${String(daysInMonth).padStart(2, "0")}`;
+  const lastWeekStart = getWeekStartFromLocalDateString(lastOfMonth);
+  const gridEnd = addDaysToLocalDate(lastWeekStart, 6);
+
+  const cells: Array<{ localDate: string; day: number; inMonth: boolean }> = [];
+  let cursor = gridStart;
+  while (cursor <= gridEnd) {
+    cells.push({
+      localDate: cursor,
+      day: Number(cursor.slice(8, 10)),
+      inMonth: cursor.startsWith(yearMonth),
+    });
+    cursor = addDaysToLocalDate(cursor, 1);
+  }
+  return cells;
+}
+
+export function listRecentWeekStarts(
+  currentWeekStart: string,
+  weekCount: number = 4,
+): string[] {
+  const starts: string[] = [];
+  for (let index = weekCount - 1; index >= 0; index -= 1) {
+    starts.push(addDaysToLocalDate(currentWeekStart, -7 * index));
+  }
+  return starts;
+}
+
 /**
  * Completed Mondays from firstWeekStart inclusive up to (but not including) currentWeekStart.
  */

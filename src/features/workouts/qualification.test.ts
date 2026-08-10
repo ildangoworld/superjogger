@@ -9,8 +9,13 @@ import {
   stepCountFromCadence,
 } from "./qualification.ts";
 import {
+  addDaysToLocalDate,
+  addMonthsToYearMonth,
+  buildMonthCalendarDays,
   formatLocalDate,
   getWeekStartFromLocalDateString,
+  getYearMonthFromLocalDate,
+  listRecentWeekStarts,
 } from "../../lib/dates/week.ts";
 import {
   isFutureLocalDate,
@@ -154,5 +159,31 @@ describe("date helpers", () => {
   it("converts Seoul wall time to the expected UTC instant", () => {
     const iso = zonedLocalToUtcIso("2026-08-07", "09:30", "Asia/Seoul");
     assert.equal(iso, "2026-08-07T00:30:00.000Z");
+  });
+
+  it("adds months across year boundaries", () => {
+    assert.equal(addMonthsToYearMonth("2026-01", -1), "2025-12");
+    assert.equal(addMonthsToYearMonth("2025-12", 1), "2026-01");
+  });
+
+  it("builds a Monday-start month grid", () => {
+    const cells = buildMonthCalendarDays("2026-08");
+    assert.equal(cells[0]?.localDate, "2026-07-27");
+    assert.equal(cells[0]?.inMonth, false);
+    assert.equal(cells.find((cell) => cell.localDate === "2026-08-01")?.inMonth, true);
+    assert.equal(cells.at(-1)?.localDate, "2026-09-06");
+    assert.equal(cells.at(-1)?.inMonth, false);
+    assert.equal(cells.length % 7, 0);
+  });
+
+  it("lists four recent week starts oldest-first", () => {
+    assert.deepEqual(listRecentWeekStarts("2026-08-03", 4), [
+      "2026-07-13",
+      "2026-07-20",
+      "2026-07-27",
+      "2026-08-03",
+    ]);
+    assert.equal(getYearMonthFromLocalDate("2026-08-10"), "2026-08");
+    assert.equal(addDaysToLocalDate("2026-08-03", -21), "2026-07-13");
   });
 });

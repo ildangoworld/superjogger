@@ -8,14 +8,8 @@ import {
   runWorkoutAnalysis,
 } from "@/features/analysis/run-analysis";
 import { hasCoreAnalysisFieldsChanged } from "@/features/analysis/stale";
-import {
-  PROMPT_VERSION,
-  shouldStartAutoAnalysis,
-} from "@/features/analysis/schema";
-import {
-  getRemainingAnalysisSlots,
-  reserveAnalysisSlot,
-} from "@/features/analysis/usage";
+import { PROMPT_VERSION } from "@/features/analysis/schema";
+import { reserveAnalysisSlot } from "@/features/analysis/usage";
 import {
   durationPartsToSeconds,
   kilometersToMeters,
@@ -210,53 +204,43 @@ export async function createWorkout(
   revalidatePath("/");
   revalidatePath("/record");
 
-  const remaining = await getRemainingAnalysisSlots(
-    supabase,
-    user.id,
-    formatLocalDate(timezone),
-  );
-
   let analysisQuery = "";
-  if (!shouldStartAutoAnalysis(remaining)) {
+  const workoutId = created.id;
+  const userId = user.id;
+  const userTimezone = timezone;
+  const requestKey = `auto:${workoutId}`;
+
+  const reserved = await reserveAnalysisSlot(supabase, {
+    userId,
+    workoutId,
+    usageLocalDate: formatLocalDate(timezone),
+    triggerType: "AUTO",
+    requestKey,
+    promptVersion: PROMPT_VERSION,
+  });
+
+  if (!reserved.ok && reserved.reason === "LIMIT") {
     analysisQuery = "&analysis=limit";
-  } else {
-    const workoutId = created.id;
-    const userId = user.id;
-    const userTimezone = timezone;
-    const requestKey = `auto:${workoutId}`;
-
-    const reserved = await reserveAnalysisSlot(supabase, {
-      userId,
-      workoutId,
-      usageLocalDate: formatLocalDate(timezone),
-      triggerType: "AUTO",
-      requestKey,
-      promptVersion: PROMPT_VERSION,
+  } else if (reserved.ok) {
+    analysisQuery = "&analysis=pending";
+    after(async () => {
+      try {
+        const admin = createServiceRoleClient();
+        await runWorkoutAnalysis({
+          supabase: admin,
+          userId,
+          workoutId,
+          timezone: userTimezone,
+          triggerType: "AUTO",
+          requestKey,
+        });
+        revalidatePath(`/workouts/${workoutId}`);
+        revalidatePath("/workouts");
+        revalidatePath("/");
+      } catch {
+        // Analysis must never undo a successful workout save.
+      }
     });
-
-    if (!reserved.ok && reserved.reason === "LIMIT") {
-      analysisQuery = "&analysis=limit";
-    } else {
-      analysisQuery = "&analysis=pending";
-      after(async () => {
-        try {
-          const admin = createServiceRoleClient();
-          await runWorkoutAnalysis({
-            supabase: admin,
-            userId,
-            workoutId,
-            timezone: userTimezone,
-            triggerType: "AUTO",
-            requestKey,
-          });
-          revalidatePath(`/workouts/${workoutId}`);
-          revalidatePath("/workouts");
-          revalidatePath("/");
-        } catch {
-          // Analysis must never undo a successful workout save.
-        }
-      });
-    }
   }
 
   redirect(

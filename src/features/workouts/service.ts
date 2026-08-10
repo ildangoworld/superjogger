@@ -31,7 +31,7 @@ export async function reassignDailyGoalFlags(
 
   const { data, error } = await supabase
     .from("workouts")
-    .select("id, local_date, qualifies_by_rule, created_at")
+    .select("id, local_date, qualifies_by_rule, created_at, counts_for_daily_goal")
     .eq("user_id", userId)
     .in("local_date", uniqueDates);
 
@@ -49,14 +49,37 @@ export async function reassignDailyGoalFlags(
     })),
   );
 
+  const toTrue: string[] = [];
+  const toFalse: string[] = [];
   for (const row of workouts) {
     const next = flags.get(row.id) ?? false;
+    if (row.counts_for_daily_goal === next) {
+      continue;
+    }
+    if (next) {
+      toTrue.push(row.id);
+    } else {
+      toFalse.push(row.id);
+    }
+  }
+
+  if (toTrue.length > 0) {
     const { error: updateError } = await supabase
       .from("workouts")
-      .update({ counts_for_daily_goal: next })
-      .eq("id", row.id)
-      .eq("user_id", userId);
+      .update({ counts_for_daily_goal: true })
+      .eq("user_id", userId)
+      .in("id", toTrue);
+    if (updateError) {
+      throw new Error(updateError.message);
+    }
+  }
 
+  if (toFalse.length > 0) {
+    const { error: updateError } = await supabase
+      .from("workouts")
+      .update({ counts_for_daily_goal: false })
+      .eq("user_id", userId)
+      .in("id", toFalse);
     if (updateError) {
       throw new Error(updateError.message);
     }

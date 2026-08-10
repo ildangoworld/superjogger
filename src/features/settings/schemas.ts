@@ -21,6 +21,29 @@ export const updateAiSettingsSchema = z.object({
     ),
 });
 
+export const updateAiPromptSettingsSchema = z.object({
+  systemPrompt: z
+    .string()
+    .trim()
+    .min(1, "시스템 프롬프트를 입력해 주세요.")
+    .max(10000, "시스템 프롬프트는 10000자 이하여야 해요."),
+  detailRuleDetailed: z
+    .string()
+    .trim()
+    .min(1, "상세 추천 규칙을 입력해 주세요.")
+    .max(2000, "상세 추천 규칙은 2000자 이하여야 해요."),
+  detailRuleLight: z
+    .string()
+    .trim()
+    .min(1, "간단 추천 규칙을 입력해 주세요.")
+    .max(2000, "간단 추천 규칙은 2000자 이하여야 해요."),
+  userInstruction: z
+    .string()
+    .trim()
+    .min(1, "사용자 지시문을 입력해 주세요.")
+    .max(2000, "사용자 지시문은 2000자 이하여야 해요."),
+});
+
 export const addAdminUserSchema = z.object({
   email: emailSchema,
   role: z.enum(["SUPER", "STAFF"]),

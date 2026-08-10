@@ -12,11 +12,15 @@ import {
   findAuthUserIdByEmail,
 } from "@/features/settings/admins";
 import { normalizeAiAppSettings } from "@/features/settings/resolve";
-import { saveAiAppSettings } from "@/features/settings/queries";
+import {
+  saveAiAppSettings,
+  saveAiPromptSettings,
+} from "@/features/settings/queries";
 import {
   addAdminUserSchema,
   removeAdminUserSchema,
   updateAdminUserSchema,
+  updateAiPromptSettingsSchema,
   updateAiSettingsSchema,
 } from "@/features/settings/schemas";
 import { createServiceRoleClient } from "@/lib/supabase/server";
@@ -80,6 +84,58 @@ export async function updateAiSettings(
   revalidatePath("/admin/settings/ai");
   revalidatePath("/admin");
   return { ok: true, message: "AI 설정을 저장했어요." };
+}
+
+export async function updateAiPromptSettings(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { admin, db } = await withAdminPermission("settings");
+  const parsed = updateAiPromptSettingsSchema.safeParse({
+    systemPrompt: formString(formData, "systemPrompt"),
+    detailRuleDetailed: formString(formData, "detailRuleDetailed"),
+    detailRuleLight: formString(formData, "detailRuleLight"),
+    userInstruction: formString(formData, "userInstruction"),
+  });
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요.",
+    };
+  }
+
+  const settings = parsed.data;
+
+  try {
+    await saveAiPromptSettings({
+      settings,
+      updatedBy: admin.userId,
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : "설정을 저장하지 못했어요.",
+    };
+  }
+
+  await writeAdminAuditLog(db, {
+    actorId: admin.userId,
+    action: "AI_PROMPT_SETTINGS_UPDATE",
+    targetType: "app_settings",
+    detail: {
+      systemPromptLength: settings.systemPrompt.length,
+      detailRuleDetailedLength: settings.detailRuleDetailed.length,
+      detailRuleLightLength: settings.detailRuleLight.length,
+      userInstructionLength: settings.userInstruction.length,
+    },
+  });
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin/settings/prompts");
+  revalidatePath("/admin");
+  return { ok: true, message: "AI 프롬프트를 저장했어요." };
 }
 
 export async function addAdminUser(

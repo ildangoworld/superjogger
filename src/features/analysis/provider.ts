@@ -1,32 +1,21 @@
 import {
+  buildSystemPrompt,
+  type AiPromptConfig,
+} from "@/features/analysis/prompts";
+import {
   parseWorkoutAnalysisResult,
   SCHEMA_RETRY_LIMIT,
 } from "@/features/analysis/schema";
 import type { AnalysisContext } from "@/features/analysis/context";
 import type { WorkoutAnalysisResult } from "@/features/analysis/types";
-import { getAiRuntimeConfig } from "@/features/settings/queries";
-
-function buildSystemPrompt(detail: "LIGHT" | "DETAILED"): string {
-  const detailRule =
-    detail === "DETAILED"
-      ? "nextWorkoutSuggestion에는 권장 시간·강도·주의사항을 구체적으로 적으세요."
-      : "nextWorkoutSuggestion에는 다음 운동의 방향만 짧게 제안하세요.";
-
-  return [
-    "당신은 SuperJogger의 AI 조깅 코치입니다.",
-    "달리기·걷기·혼합 운동을 동등하게 존중하세요.",
-    "의료 진단·처방·확정적 회복 판정을 하지 마세요.",
-    "통증·급격한 증가·위험 신호가 있으면 칭찬보다 안전 안내를 우선하세요.",
-    "알 수 없는 의도를 추측해 단정하지 마세요.",
-    "사실(기록)과 해석·제안을 구분하는 톤으로 한국어로 답하세요.",
-    detailRule,
-    "반드시 지정된 JSON 객체만 반환하세요. 추가 키나 마크다운을 넣지 마세요.",
-    "필드: summary, intensityInterpretation, trend, nextWorkoutSuggestion, safetyNotice(없으면 null), trendSummaryForNextAnalysis, riskLevel(NONE|CAUTION|HIGH).",
-  ].join(" ");
-}
+import {
+  getAiPromptConfig,
+  getAiRuntimeConfig,
+} from "@/features/settings/queries";
 
 async function requestOnce(
   context: AnalysisContext,
+  prompts: AiPromptConfig,
 ): Promise<{ model: string; raw: unknown }> {
   const resolved = await getAiRuntimeConfig();
   if (!resolved.ok) {
@@ -48,13 +37,12 @@ async function requestOnce(
       messages: [
         {
           role: "system",
-          content: buildSystemPrompt(context.recommendationDetail),
+          content: buildSystemPrompt(prompts, context.recommendationDetail),
         },
         {
           role: "user",
           content: JSON.stringify({
-            instruction:
-              "아래 구조화 컨텍스트만으로 이번 운동을 분석하세요. 원본 집계 수치를 AI 이전 요약보다 우선하세요.",
+            instruction: prompts.userInstruction,
             context,
           }),
         },
@@ -112,13 +100,14 @@ export async function callWorkoutAnalysisProvider(
     };
   }
 
+  const prompts = await getAiPromptConfig();
   let modelName: string | null = null;
   let requestSent = false;
   let lastError = "AI 분석을 완료하지 못했어요.";
 
   for (let attempt = 0; attempt <= SCHEMA_RETRY_LIMIT; attempt += 1) {
     try {
-      const { model, raw } = await requestOnce(context);
+      const { model, raw } = await requestOnce(context, prompts);
       modelName = model;
       requestSent = true;
       const parsed = parseWorkoutAnalysisResult(raw);
