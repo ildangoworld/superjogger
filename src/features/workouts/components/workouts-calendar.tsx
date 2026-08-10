@@ -42,7 +42,9 @@ export function WorkoutsCalendar({
           <button
             type="button"
             aria-label="이전 달"
-            onClick={() => setYearMonth((current) => addMonthsToYearMonth(current, -1))}
+            onClick={() =>
+              setYearMonth((current) => addMonthsToYearMonth(current, -1))
+            }
             className="text-pine-800 border-line hover:border-pine-300 inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm"
           >
             ←
@@ -53,7 +55,9 @@ export function WorkoutsCalendar({
           <button
             type="button"
             aria-label="다음 달"
-            onClick={() => setYearMonth((current) => addMonthsToYearMonth(current, 1))}
+            onClick={() =>
+              setYearMonth((current) => addMonthsToYearMonth(current, 1))
+            }
             className="text-pine-800 border-line hover:border-pine-300 inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm"
           >
             →
@@ -91,17 +95,24 @@ export function WorkoutsCalendar({
               }}
               className={[
                 "relative flex h-11 flex-col items-center justify-center rounded-lg text-sm transition-colors",
-                cell.inMonth ? "text-pine-900" : "text-fog-300",
-                isSelected ? "bg-pine-800 text-fog-50" : "",
-                !isSelected && isToday ? "bg-pine-50" : "",
-                !isSelected && !isToday && cell.inMonth
-                  ? "hover:bg-fog-100"
-                  : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
+                !cell.inMonth
+                  ? "text-fog-300"
+                  : isSelected
+                    ? "bg-pine-800 text-fog-50"
+                    : isToday
+                      ? "bg-pine-50 text-pine-900"
+                      : "text-pine-900 hover:bg-fog-100",
+              ].join(" ")}
             >
-              <span className={isToday && !isSelected ? "font-semibold" : ""}>
+              <span
+                className={
+                  isToday && !isSelected
+                    ? "font-semibold"
+                    : isSelected
+                      ? "font-semibold text-fog-50"
+                      : ""
+                }
+              >
                 {cell.day}
               </span>
               {hasWorkout ? (
@@ -119,23 +130,6 @@ export function WorkoutsCalendar({
           );
         })}
       </div>
-
-      {selectedDate ? (
-        <p className="text-muted mt-3 text-sm">
-          {selectedDate} 기록만 보고 있어요.{" "}
-          <button
-            type="button"
-            onClick={() => onSelectDate(null)}
-            className="text-pine-700 font-medium underline-offset-4 hover:underline"
-          >
-            전체 보기
-          </button>
-        </p>
-      ) : (
-        <p className="text-muted mt-3 text-sm">
-          운동한 날은 점으로 표시돼요. 날짜를 누르면 그날 기록만 볼 수 있어요.
-        </p>
-      )}
     </section>
   );
 }

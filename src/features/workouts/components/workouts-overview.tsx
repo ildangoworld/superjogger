@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { analysisStatusLabel } from "@/features/analysis/format";
-import type { AnalysisStatus } from "@/features/analysis/types";
 import { RecentWeeksSummary } from "@/features/workouts/components/recent-weeks-summary";
 import type { WeekSummaryView } from "@/features/workouts/components/recent-weeks-summary";
 import { WorkoutsCalendar } from "@/features/workouts/components/workouts-calendar";
@@ -11,36 +9,34 @@ import {
   formatCategory,
   formatDistanceKm,
   formatDuration,
-  goalStatusLabel,
+  formatLocalDateTimeLabel,
+  workoutListAlertLabel,
 } from "@/features/workouts/format";
 
 type WorkoutListItem = {
   id: string;
   category: "RUNNING" | "WALKING" | "MIXED";
   local_date: string;
+  started_at: string;
   duration_seconds: number;
   distance_meters: number;
   qualifies_by_rule: boolean;
-  counts_for_daily_goal: boolean;
-  active_analysis_id: string | null;
 };
 
 export function WorkoutsOverview({
   todayLocal,
+  timezone,
   workouts,
   weeks,
   trendSummary,
-  remainingSlots,
-  statusByAnalysisId,
 }: {
   todayLocal: string;
+  timezone: string;
   workouts: WorkoutListItem[];
   weeks: WeekSummaryView[];
   trendSummary: string | null;
-  remainingSlots: number;
-  statusByAnalysisId: Record<string, AnalysisStatus>;
 }) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(todayLocal);
 
   const countsByDate = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -57,6 +53,8 @@ export function WorkoutsOverview({
     return workouts.filter((workout) => workout.local_date === selectedDate);
   }, [workouts, selectedDate]);
 
+  const weeksNewestFirst = useMemo(() => [...weeks].reverse(), [weeks]);
+
   return (
     <>
       <WorkoutsCalendar
@@ -66,10 +64,19 @@ export function WorkoutsOverview({
         onSelectDate={setSelectedDate}
       />
 
-      <RecentWeeksSummary weeks={weeks} trendSummary={trendSummary} />
-
       <section className="mt-10">
-        <h2 className="text-pine-900 text-lg font-semibold">운동 목록</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-pine-900 text-lg font-semibold">운동 목록</h2>
+          {selectedDate ? (
+            <button
+              type="button"
+              onClick={() => setSelectedDate(null)}
+              className="text-pine-700 text-sm font-medium underline-offset-4 hover:underline"
+            >
+              전체 보기
+            </button>
+          ) : null}
+        </div>
         {!workouts.length ? (
           <div className="mt-4">
             <p className="text-pine-900 text-base font-medium">
@@ -91,45 +98,49 @@ export function WorkoutsOverview({
           </p>
         ) : (
           <ul className="mt-4 flex flex-col gap-3">
-            {visibleWorkouts.map((workout) => (
-              <li key={workout.id}>
-                <Link
-                  href={`/workouts/${workout.id}`}
-                  className="border-line hover:border-pine-300 block rounded-lg border px-4 py-4 transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-pine-900 font-semibold">
-                      {formatCategory(workout.category)}
+            {visibleWorkouts.map((workout) => {
+              const alertLabel = workoutListAlertLabel(
+                workout.qualifies_by_rule,
+              );
+              return (
+                <li key={workout.id}>
+                  <Link
+                    href={`/workouts/${workout.id}`}
+                    className="border-line hover:border-pine-300 block rounded-lg border px-4 py-4 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-pine-900 font-semibold">
+                        {formatCategory(workout.category)}
+                      </p>
+                      <p className="text-muted text-xs">
+                        {formatLocalDateTimeLabel(
+                          workout.local_date,
+                          workout.started_at,
+                          timezone,
+                        )}
+                      </p>
+                    </div>
+                    <p className="text-muted mt-2 text-sm">
+                      {formatDuration(workout.duration_seconds)} ·{" "}
+                      {formatDistanceKm(workout.distance_meters)}
                     </p>
-                    <p className="text-muted text-xs">{workout.local_date}</p>
-                  </div>
-                  <p className="text-muted mt-2 text-sm">
-                    {formatDuration(workout.duration_seconds)} ·{" "}
-                    {formatDistanceKm(workout.distance_meters)}
-                  </p>
-                  <p className="text-pine-700 mt-2 text-xs font-medium">
-                    {goalStatusLabel({
-                      qualifiesByRule: workout.qualifies_by_rule,
-                      countsForDailyGoal: workout.counts_for_daily_goal,
-                    })}
-                    {" · "}
-                    {analysisStatusLabel(
-                      workout.active_analysis_id
-                        ? (statusByAnalysisId[workout.active_analysis_id] ??
-                            null)
-                        : null,
-                      {
-                        limitExceeded:
-                          !workout.active_analysis_id && remainingSlots <= 0,
-                      },
-                    )}
-                  </p>
-                </Link>
-              </li>
-            ))}
+                    {alertLabel ? (
+                      <p className="text-dawn-900 mt-2 text-xs font-medium">
+                        {alertLabel}
+                      </p>
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
+
+      <RecentWeeksSummary
+        weeks={weeksNewestFirst}
+        trendSummary={trendSummary}
+      />
     </>
   );
 }

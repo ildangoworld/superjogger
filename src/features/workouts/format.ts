@@ -40,15 +40,23 @@ export function formatLocalDateTimeLabel(
   return `${localDate} ${time}`;
 }
 
+/** Short alert for list rows that did not meet the 10min / 1km rule. */
+export function workoutListAlertLabel(qualifiesByRule: boolean): string | null {
+  if (qualifiesByRule) {
+    return null;
+  }
+  return "10분·1km 미만이라 목표에 안 잡혀요";
+}
+
 export function goalStatusLabel(input: {
   qualifiesByRule: boolean;
   countsForDailyGoal: boolean;
 }): string {
   if (input.countsForDailyGoal) {
-    return "목표 인정";
+    return "이번 주 목표에 반영";
   }
   if (input.qualifiesByRule) {
-    return "인정 조건 충족 · 당일 대표 아님";
+    return "같은 날 다른 기록이 목표에 반영됨";
   }
-  return "목표 미반영";
+  return "10분·1km 미만 · 목표 미반영";
 }

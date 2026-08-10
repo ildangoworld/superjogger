@@ -1,15 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getRemainingAnalysisSlots } from "@/features/analysis/usage";
-import type { AnalysisStatus } from "@/features/analysis/types";
 import type { WeekSummaryView } from "@/features/workouts/components/recent-weeks-summary";
+import { WorkoutsHeaderStats } from "@/features/workouts/components/workouts-header-stats";
 import { WorkoutsOverview } from "@/features/workouts/components/workouts-overview";
+import { formatDistanceKm } from "@/features/workouts/format";
+import {
+  calculateWeekGoalStreak,
+  type WeekGoalOutcome,
+} from "@/features/workouts/stats";
 import type { WorkoutCategory } from "@/features/workouts/types";
 import {
   addDaysToLocalDate,
   formatLocalDate,
   getWeekStartDate,
+  getYearMonthFromLocalDate,
   listRecentWeekStarts,
 } from "@/lib/dates/week";
 import type { Json } from "@/lib/database.types";
@@ -101,7 +106,7 @@ export default async function WorkoutsPage({
     supabase
       .from("workouts")
       .select(
-        "id, category, local_date, started_at, duration_seconds, distance_meters, qualifies_by_rule, counts_for_daily_goal, active_analysis_id",
+        "id, category, local_date, started_at, duration_seconds, distance_meters, qualifies_by_rule",
       )
       .eq("user_id", user.id)
       .order("started_at", { ascending: false }),
@@ -120,55 +125,126 @@ export default async function WorkoutsPage({
   const currentWeekStart = getWeekStartDate(timezone);
   const weekStarts = listRecentWeekStarts(currentWeekStart, 4);
   const fourWeeksAgo = addDaysToLocalDate(currentWeekStart, -21);
-  const analysisIds = (workouts ?? [])
-    .map((workout) => workout.active_analysis_id)
-    .filter((id): id is string => Boolean(id));
+  const streakLookbackStart = addDaysToLocalDate(currentWeekStart, -7 * 51);
 
-  const [remainingSlots, analysesResult, summariesResult, trendResult] =
-    await Promise.all([
-      getRemainingAnalysisSlots(supabase, user.id, todayLocal),
-      analysisIds.length > 0
-        ? supabase
-            .from("workout_analyses")
-            .select("id, status")
-            .eq("user_id", user.id)
-            .in("id", analysisIds)
-        : Promise.resolve({
-            data: [] as Array<{ id: string; status: AnalysisStatus }>,
-          }),
-      supabase
-        .from("weekly_summaries")
-        .select(
-          "week_start, workout_count, qualified_day_count, goal_count, goal_achieved, total_duration_seconds, total_distance_meters, category_counts",
-        )
-        .eq("user_id", user.id)
-        .gte("week_start", fourWeeksAgo)
-        .lte("week_start", currentWeekStart)
-        .order("week_start", { ascending: true }),
-      supabase
-        .from("user_trend_state")
-        .select("latest_trend_summary")
-        .eq("user_id", user.id)
-        .maybeSingle(),
-    ]);
+  const [summariesResult, trendResult, currentGoalResult] = await Promise.all([
+    supabase
+      .from("weekly_summaries")
+      .select(
+        "week_start, workout_count, qualified_day_count, goal_count, goal_achieved, total_duration_seconds, total_distance_meters, category_counts",
+      )
+      .eq("user_id", user.id)
+      .gte("week_start", streakLookbackStart)
+      .lte("week_start", currentWeekStart)
+      .order("week_start", { ascending: true }),
+    supabase
+      .from("user_trend_state")
+      .select("latest_trend_summary")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("weekly_goals")
+      .select("target_count")
+      .eq("user_id", user.id)
+      .eq("week_start", currentWeekStart)
+      .maybeSingle(),
+  ]);
 
-  const statusByAnalysisId: Record<string, AnalysisStatus> = {};
-  for (const row of analysesResult.data ?? []) {
-    statusByAnalysisId[row.id] = row.status;
+  const summaryRows = summariesResult.data ?? [];
+  const recentSummaryRows = summaryRows.filter(
+    (row) => row.week_start >= fourWeeksAgo,
+  );
+  const weeks = buildWeekViews(weekStarts, recentSummaryRows);
+  const trendSummary = trendResult.data?.latest_trend_summary ?? null;
+  const thisWeek = weeks[weeks.length - 1];
+  const currentTargetCount = currentGoalResult.data?.target_count ?? 0;
+  const qualifiedDayCount = thisWeek?.qualifiedDayCount ?? 0;
+  const weekGoalLabel =
+    currentTargetCount > 0
+      ? `${qualifiedDayCount}/${currentTargetCount}일`
+      : "미설정";
+
+  const streakOutcomes: WeekGoalOutcome[] = summaryRows.map((row) => ({
+    weekStart: row.week_start,
+    goalCount: row.goal_count,
+    qualifiedDayCount: row.qualified_day_count,
+  }));
+  if (currentTargetCount > 0) {
+    const currentIndex = streakOutcomes.findIndex(
+      (outcome) => outcome.weekStart === currentWeekStart,
+    );
+    if (currentIndex >= 0) {
+      streakOutcomes[currentIndex] = {
+        ...streakOutcomes[currentIndex],
+        goalCount: currentTargetCount,
+      };
+    } else {
+      streakOutcomes.push({
+        weekStart: currentWeekStart,
+        goalCount: currentTargetCount,
+        qualifiedDayCount,
+      });
+    }
   }
 
-  const weeks = buildWeekViews(weekStarts, summariesResult.data ?? []);
-  const trendSummary = trendResult.data?.latest_trend_summary ?? null;
+  const weekStreak = calculateWeekGoalStreak({
+    currentWeekStart,
+    outcomes: streakOutcomes,
+  });
+
+  const workoutRows = workouts ?? [];
+  const currentYearMonth = getYearMonthFromLocalDate(todayLocal);
+  const monthDistanceMeters = workoutRows.reduce((sum, workout) => {
+    if (!workout.local_date.startsWith(currentYearMonth)) {
+      return sum;
+    }
+    return sum + workout.distance_meters;
+  }, 0);
+  const totalDistanceMeters = workoutRows.reduce(
+    (sum, workout) => sum + workout.distance_meters,
+    0,
+  );
+
+  const headerStats = [
+    {
+      id: "week-goal",
+      value: weekGoalLabel,
+      label: "이번 주 목표",
+      hint:
+        currentTargetCount > 0
+          ? `이번 주 목표 ${currentTargetCount}일 중 ${qualifiedDayCount}일을 인정받았어요.`
+          : "이번 주 목표가 아직 없어요. 홈에서 주간 목표를 정해 주세요.",
+    },
+    {
+      id: "week-streak",
+      value: `${weekStreak}주`,
+      label: "연속 성공",
+      hint: "주간 목표를 연속으로 달성한 주 수예요. 이번 주가 아직이면 지난주부터 세요.",
+    },
+    {
+      id: "month-distance",
+      value: formatDistanceKm(monthDistanceMeters),
+      label: "이번 달",
+      hint: "이번 달에 기록한 총 거리예요.",
+    },
+    {
+      id: "total-distance",
+      value: formatDistanceKm(totalDistanceMeters),
+      label: "총 거리",
+      hint: "지금까지 기록한 총 거리예요.",
+    },
+  ];
+
+  // Keep recent-4-week cards aligned with the live current-week goal when present.
+  if (currentTargetCount > 0 && thisWeek) {
+    thisWeek.goalCount = currentTargetCount;
+    thisWeek.goalAchieved = qualifiedDayCount >= currentTargetCount;
+  }
 
   return (
     <div className="pt-6 pb-8">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-pine-900 text-2xl font-semibold">기록</h1>
-          <p className="text-muted mt-2 text-sm leading-6">
-            달력과 최근 4주 변화, 최신 운동을 확인할 수 있어요.
-          </p>
-        </div>
+        <h1 className="text-pine-900 text-2xl font-semibold">기록</h1>
         <Link
           href="/record"
           className="bg-pine-800 text-fog-50 hover:bg-pine-700 inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
@@ -176,6 +252,8 @@ export default async function WorkoutsPage({
           기록하기
         </Link>
       </div>
+
+      <WorkoutsHeaderStats items={headerStats} />
 
       {params.deleted ? (
         <p className="border-pine-200 bg-pine-50 text-pine-800 mt-4 rounded-lg border px-3 py-2 text-sm">
@@ -185,11 +263,10 @@ export default async function WorkoutsPage({
 
       <WorkoutsOverview
         todayLocal={todayLocal}
-        workouts={workouts ?? []}
+        timezone={timezone}
+        workouts={workoutRows}
         weeks={weeks}
         trendSummary={trendSummary}
-        remainingSlots={remainingSlots}
-        statusByAnalysisId={statusByAnalysisId}
       />
     </div>
   );

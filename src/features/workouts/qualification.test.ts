@@ -21,6 +21,7 @@ import {
   isFutureLocalDate,
   zonedLocalToUtcIso,
 } from "../../lib/dates/zoned.ts";
+import { calculateWeekGoalStreak } from "./stats.ts";
 
 describe("qualifiesByRule", () => {
   it("does not qualify 9m59s and 999m", () => {
@@ -185,5 +186,72 @@ describe("date helpers", () => {
     ]);
     assert.equal(getYearMonthFromLocalDate("2026-08-10"), "2026-08");
     assert.equal(addDaysToLocalDate("2026-08-03", -21), "2026-07-13");
+  });
+});
+
+describe("calculateWeekGoalStreak", () => {
+  it("returns 0 when there are no outcomes", () => {
+    assert.equal(
+      calculateWeekGoalStreak({
+        currentWeekStart: "2026-08-03",
+        outcomes: [],
+      }),
+      0,
+    );
+  });
+
+  it("counts consecutive successful weeks including the current week", () => {
+    assert.equal(
+      calculateWeekGoalStreak({
+        currentWeekStart: "2026-08-03",
+        outcomes: [
+          { weekStart: "2026-07-20", goalCount: 2, qualifiedDayCount: 2 },
+          { weekStart: "2026-07-27", goalCount: 2, qualifiedDayCount: 2 },
+          { weekStart: "2026-08-03", goalCount: 2, qualifiedDayCount: 2 },
+        ],
+      }),
+      3,
+    );
+  });
+
+  it("starts from the previous week when the current week is not yet successful", () => {
+    assert.equal(
+      calculateWeekGoalStreak({
+        currentWeekStart: "2026-08-03",
+        outcomes: [
+          { weekStart: "2026-07-20", goalCount: 2, qualifiedDayCount: 2 },
+          { weekStart: "2026-07-27", goalCount: 2, qualifiedDayCount: 2 },
+          { weekStart: "2026-08-03", goalCount: 2, qualifiedDayCount: 1 },
+        ],
+      }),
+      2,
+    );
+  });
+
+  it("breaks when a week with a goal was missed", () => {
+    assert.equal(
+      calculateWeekGoalStreak({
+        currentWeekStart: "2026-08-03",
+        outcomes: [
+          { weekStart: "2026-07-20", goalCount: 2, qualifiedDayCount: 2 },
+          { weekStart: "2026-07-27", goalCount: 2, qualifiedDayCount: 0 },
+          { weekStart: "2026-08-03", goalCount: 2, qualifiedDayCount: 2 },
+        ],
+      }),
+      1,
+    );
+  });
+
+  it("breaks on weeks without a goal", () => {
+    assert.equal(
+      calculateWeekGoalStreak({
+        currentWeekStart: "2026-08-03",
+        outcomes: [
+          { weekStart: "2026-07-27", goalCount: 0, qualifiedDayCount: 3 },
+          { weekStart: "2026-08-03", goalCount: 2, qualifiedDayCount: 2 },
+        ],
+      }),
+      1,
+    );
   });
 });
