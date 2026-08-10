@@ -7,8 +7,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/database.types";
 import type {
   CrewBoardMember,
+  CrewJoinRequest,
+  CrewPreview,
   CrewRole,
   CrewSummary,
+  PublicCrewCard,
 } from "@/features/crews/types";
 import {
   calculateJoggerGrade,
@@ -72,7 +75,7 @@ export async function listMyCrews(
   const crewIds = memberships.map((row) => row.crew_id);
   const { data: crews, error: crewsError } = await supabase
     .from("crews")
-    .select("id, name, description, invite_code, owner_id")
+    .select("id, name, description, invite_code, owner_id, is_public")
     .in("id", crewIds);
 
   if (crewsError) {
@@ -105,10 +108,121 @@ export async function listMyCrews(
       ownerId: crew.owner_id,
       role: membership.role,
       memberCount: count ?? 0,
+      isPublic: crew.is_public,
     });
   }
 
   return result;
+}
+
+export async function listPublicCrews(
+  supabase: Supabase,
+): Promise<PublicCrewCard[]> {
+  const { data, error } = await supabase.rpc("list_public_crews");
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.map((row) => {
+    const item = row as Record<string, unknown>;
+    return {
+      id: String(item.id),
+      name: String(item.name),
+      description:
+        typeof item.description === "string" ? item.description : null,
+      memberCount: Number(item.member_count ?? 0),
+      isMember: Boolean(item.is_member),
+      pendingRequest: Boolean(item.pending_request),
+    };
+  });
+}
+
+export async function getCrewPreviewById(
+  supabase: Supabase,
+  crewId: string,
+): Promise<CrewPreview | null> {
+  const { data, error } = await supabase.rpc("get_crew_public_preview", {
+    p_crew_id: crewId,
+  });
+  if (error) {
+    throw new Error(error.message);
+  }
+  const payload = asObject(data);
+  if (!payload?.ok) {
+    return null;
+  }
+  return mapCrewPreview(payload.crew);
+}
+
+export async function getCrewPreviewByInviteCode(
+  supabase: Supabase,
+  inviteCode: string,
+): Promise<CrewPreview | null> {
+  const { data, error } = await supabase.rpc("get_crew_preview_by_invite_code", {
+    p_invite_code: inviteCode,
+  });
+  if (error) {
+    throw new Error(error.message);
+  }
+  const payload = asObject(data);
+  if (!payload?.ok) {
+    return null;
+  }
+  return mapCrewPreview(payload.crew);
+}
+
+function mapCrewPreview(value: unknown): CrewPreview | null {
+  const crew = asObject(value as Json);
+  if (!crew) {
+    return null;
+  }
+  return {
+    id: String(crew.id),
+    name: String(crew.name),
+    description: typeof crew.description === "string" ? crew.description : null,
+    isPublic: Boolean(crew.is_public),
+    inviteCode: typeof crew.invite_code === "string" ? crew.invite_code : null,
+    memberCount: Number(crew.member_count ?? 0),
+    isMember: Boolean(crew.is_member),
+    pendingRequest: Boolean(crew.pending_request),
+    isOwner: Boolean(crew.is_owner),
+  };
+}
+
+export async function listCrewJoinRequests(
+  supabase: Supabase,
+  crewId: string,
+): Promise<CrewJoinRequest[]> {
+  const { data, error } = await supabase.rpc("list_crew_join_requests", {
+    p_crew_id: crewId,
+  });
+  if (error) {
+    throw new Error(error.message);
+  }
+  const payload = asObject(data);
+  if (!payload?.ok || !Array.isArray(payload.requests)) {
+    if (payload?.reason === "FORBIDDEN") {
+      return [];
+    }
+    throw new Error("가입 신청 목록을 불러오지 못했어요.");
+  }
+
+  return payload.requests.map((row) => {
+    const item = row as Record<string, unknown>;
+    return {
+      id: String(item.id),
+      userId: String(item.user_id),
+      nickname: String(item.nickname),
+      avatarUrl: typeof item.avatar_url === "string" ? item.avatar_url : null,
+      message: typeof item.message === "string" ? item.message : null,
+      status: "PENDING",
+      createdAt: String(item.created_at),
+    };
+  });
 }
 
 export async function getCrewBoard(

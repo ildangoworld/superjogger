@@ -4,13 +4,11 @@ import { useActionState, useState } from "react";
 import { Modal } from "@/components/layout/modal";
 import {
   createCrew,
-  joinCrew,
+  requestJoinCrew,
   type CrewActionResult,
 } from "@/features/crews/actions";
 
 const initial: CrewActionResult = { ok: false };
-
-type ModalKind = "create" | "join" | null;
 
 export function CreateCrewForm() {
   const [state, action, pending] = useActionState(createCrew, initial);
@@ -35,6 +33,17 @@ export function CreateCrewForm() {
           className="border-line focus:border-pine-500 rounded-lg border bg-white px-3 py-2 outline-none"
         />
       </label>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-pine-800 text-sm font-medium">공개 설정</legend>
+        <label className="border-line flex items-center gap-3 rounded-lg border px-3 py-3 text-sm">
+          <input type="radio" name="isPublic" value="true" defaultChecked />
+          공개 · 탐색 목록에 보여요
+        </label>
+        <label className="border-line flex items-center gap-3 rounded-lg border px-3 py-3 text-sm">
+          <input type="radio" name="isPublic" value="false" />
+          비공개 · 초대 링크로만 신청할 수 있어요
+        </label>
+      </fieldset>
       {state.message && !state.ok ? (
         <p className="text-dawn-900 text-sm">{state.message}</p>
       ) : null}
@@ -49,18 +58,38 @@ export function CreateCrewForm() {
   );
 }
 
-export function JoinCrewForm() {
-  const [state, action, pending] = useActionState(joinCrew, initial);
+export function RequestJoinCrewForm({
+  crewId,
+  inviteCode,
+}: {
+  crewId?: string;
+  inviteCode?: string;
+}) {
+  const [state, action, pending] = useActionState(requestJoinCrew, initial);
+
+  if (state.ok) {
+    return (
+      <p className="border-pine-200 bg-pine-50 text-pine-800 rounded-lg border px-3 py-3 text-sm leading-6">
+        {state.message}
+      </p>
+    );
+  }
 
   return (
     <form action={action} className="flex flex-col gap-3">
+      {crewId ? <input type="hidden" name="crewId" value={crewId} /> : null}
+      {inviteCode ? (
+        <input type="hidden" name="inviteCode" value={inviteCode} />
+      ) : null}
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-pine-800 font-medium">초대 코드</span>
-        <input
-          name="inviteCode"
+        <span className="text-pine-800 font-medium">간단한 소개</span>
+        <textarea
+          name="message"
           required
-          autoCapitalize="characters"
-          className="border-line focus:border-pine-500 h-11 rounded-lg border bg-white px-3 tracking-wider uppercase outline-none"
+          maxLength={200}
+          rows={3}
+          placeholder="러닝 빈도, 목표, 하고 싶은 말 등을 적어 주세요."
+          className="border-line focus:border-pine-500 rounded-lg border bg-white px-3 py-2 outline-none"
         />
       </label>
       {state.message && !state.ok ? (
@@ -71,48 +100,26 @@ export function JoinCrewForm() {
         disabled={pending}
         className="bg-pine-800 text-fog-50 hover:bg-pine-700 h-11 rounded-lg font-semibold disabled:opacity-60"
       >
-        {pending ? "가입 중" : "크루 가입"}
+        {pending ? "신청 중" : "가입 신청하기"}
       </button>
     </form>
   );
 }
 
-export function CrewEntryActions() {
-  const [modal, setModal] = useState<ModalKind>(null);
+export function CreateCrewEntryButton() {
+  const [open, setOpen] = useState(false);
 
   return (
     <>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setModal("create")}
-          className="border-line text-pine-800 hover:bg-pine-50 h-11 rounded-lg border px-4 text-sm font-medium"
-        >
-          크루 만들기
-        </button>
-        <button
-          type="button"
-          onClick={() => setModal("join")}
-          className="border-line text-pine-800 hover:bg-pine-50 h-11 rounded-lg border px-4 text-sm font-medium"
-        >
-          초대 코드로 가입
-        </button>
-      </div>
-
-      <Modal
-        open={modal === "create"}
-        onClose={() => setModal(null)}
-        title="크루 만들기"
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="bg-pine-800 text-fog-50 hover:bg-pine-700 inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
       >
+        크루 만들기
+      </button>
+      <Modal open={open} onClose={() => setOpen(false)} title="크루 만들기">
         <CreateCrewForm />
-      </Modal>
-
-      <Modal
-        open={modal === "join"}
-        onClose={() => setModal(null)}
-        title="초대 코드로 가입"
-      >
-        <JoinCrewForm />
       </Modal>
     </>
   );

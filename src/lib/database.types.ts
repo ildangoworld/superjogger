@@ -391,6 +391,7 @@ export type Database = {
           description: string | null;
           owner_id: string;
           invite_code: string;
+          is_public: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -400,6 +401,7 @@ export type Database = {
           description?: string | null;
           owner_id: string;
           invite_code: string;
+          is_public?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -409,6 +411,7 @@ export type Database = {
           description?: string | null;
           owner_id?: string;
           invite_code?: string;
+          is_public?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -432,6 +435,36 @@ export type Database = {
           user_id?: string;
           role?: "OWNER" | "MEMBER";
           joined_at?: string;
+        };
+        Relationships: [];
+      };
+      crew_join_requests: {
+        Row: {
+          id: string;
+          crew_id: string;
+          user_id: string;
+          message: string | null;
+          status: "PENDING" | "APPROVED" | "REJECTED";
+          created_at: string;
+          decided_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          crew_id: string;
+          user_id: string;
+          message?: string | null;
+          status?: "PENDING" | "APPROVED" | "REJECTED";
+          created_at?: string;
+          decided_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          crew_id?: string;
+          user_id?: string;
+          message?: string | null;
+          status?: "PENDING" | "APPROVED" | "REJECTED";
+          created_at?: string;
+          decided_at?: string | null;
         };
         Relationships: [];
       };
@@ -637,12 +670,44 @@ export type Database = {
         Args: {
           p_name: string;
           p_description?: string | null;
+          p_is_public?: boolean;
         };
         Returns: Json;
       };
-      join_crew_by_invite_code: {
+      list_public_crews: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      get_crew_preview_by_invite_code: {
         Args: {
           p_invite_code: string;
+        };
+        Returns: Json;
+      };
+      get_crew_public_preview: {
+        Args: {
+          p_crew_id: string;
+        };
+        Returns: Json;
+      };
+      request_join_crew: {
+        Args: {
+          p_message?: string | null;
+          p_crew_id?: string | null;
+          p_invite_code?: string | null;
+        };
+        Returns: Json;
+      };
+      list_crew_join_requests: {
+        Args: {
+          p_crew_id: string;
+        };
+        Returns: Json;
+      };
+      decide_crew_join_request: {
+        Args: {
+          p_request_id: string;
+          p_decision: string;
         };
         Returns: Json;
       };

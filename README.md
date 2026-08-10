@@ -41,7 +41,7 @@ SuperJogger는 달리기와 걷기 기록을 바탕으로 사용자의 운동 �
 - 최근 운동 기록 목록과 상세 화면
 - 최근 4주 변화 요약
 - 최근 8주 성실도 기반 조거 등급
-- 초대 코드 또는 링크를 이용한 크루 가입
+- 공개/비공개 크루 탐색과 가입 신청·리더 승인
 - 여러 크루 가입이 가능한 데이터 구조
 - 크루원 현황과 주간 목표 진행도 표시
 - 프로필 및 추천 상세도 설정
@@ -167,11 +167,13 @@ MVP에는 랭킹과 순위를 만들지 않는다. 메뉴와 화면 명칭은 `�
 ### 5.6 크루 가입 정책
 
 - 운영자 또는 사용자가 크루를 생성할 수 있다.
-- 초대 코드 또는 초대 링크로 가입한다.
+- 크루는 공개 또는 비공개로 설정한다. 공개 크루만 탐색 목록에 노출된다.
+- 가입은 즉시 가입이 아니라 신청 후 리더 승인을 거친다. 신청 시 짧은 소개를 남긴다.
+- 비공개 크루는 초대 URL로만 미리보기와 신청이 가능하다. 초대 URL로 들어와도 리더 승인이 필요하다.
 - 사용자는 여러 크루에 가입할 수 있도록 처음부터 다대다 구조로 설계한다.
 - 초기 UI가 한 크루 중심이어도 DB에 단일 크루 제약을 두지 않는다.
-- 크루 소유자는 구성원을 내보낼 수 있다.
-- 사용자는 크루에서 스스로 나갈 수 있다.
+- 크루 소유자(리더)는 구성원을 내보낼 수 있고, 가입 신청을 승인하거나 거절할 수 있다.
+- 사용자는 크루에서 스스로 나갈 수 있다. 나가기 전에 확인 절차를 거친다.
 - 동일한 크루에 중복 가입할 수 없다.
 
 ## 6. 운동 기록 입력
@@ -405,12 +407,12 @@ type WorkoutAnalysisResult = {
 - 목표 달성 여부
 - AI 추세 요약
 
-### 8.8 크루 현황
+### 8.8 크루
 
-- 가입한 크루 전환
-- 초대 코드로 크루 가입
-- 크루 생성
-- 목표 달성 / 진행 중 / 시작 전 그룹 순서로 구성원 표시
+- 내 크루 목록과 공개 크루 탐색 분리
+- 크루 생성(공개/비공개)
+- 크루 상세에서 주간 목표 진행(달성 / 진행 중 / 시작 전) 표시
+- 초대 URL 복사로 공유, 가입 신청·리더 승인
 - 순위 번호 표시 금지
 
 ### 8.9 프로필 및 설정
@@ -555,7 +557,8 @@ type WorkoutAnalysisResult = {
 - `name text not null`
 - `description text null`
 - `owner_id uuid FK profiles.id`
-- `invite_code text unique not null`
+- `invite_code text unique not null` (초대 URL 토큰)
+- `is_public boolean not null`
 
 ### `crew_members`
 
@@ -564,6 +567,16 @@ type WorkoutAnalysisResult = {
 - `role text not null` (`OWNER`, `MEMBER`)
 - `joined_at timestamptz not null`
 - PK: `(crew_id, user_id)`
+
+### `crew_join_requests`
+
+- `id uuid PK`
+- `crew_id uuid FK crews.id`
+- `user_id uuid FK profiles.id`
+- `message text null`
+- `status text not null` (`PENDING`, `APPROVED`, `REJECTED`)
+- `created_at timestamptz not null`
+- `decided_at timestamptz null`
 
 ## 11. 보안 및 개인정보
 
@@ -663,8 +676,9 @@ type WorkoutAnalysisResult = {
 
 ### Phase 5. 크루
 
-- 크루 생성, 가입, 탈퇴, 구성원 내보내기
+- 크루 생성(공개/비공개), 가입 신청, 리더 승인/거절, 탈퇴, 구성원 내보내기
 - 다대다 가입 구조
+- 초대 URL 공유와 보안 함수 기반 미리보기
 - 공개용 집계 쿼리 또는 보안 함수
 - 목표 달성 / 진행 중 / 시작 전 정렬
 

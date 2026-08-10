@@ -1,53 +1,28 @@
-import Link from "next/link";
 import {
   LeaveCrewButton,
   RemoveMemberButton,
 } from "@/features/crews/components/crew-member-actions";
+import { CrewJoinRequestsPanel } from "@/features/crews/components/crew-join-requests";
+import { InviteCrewButton } from "@/features/crews/components/invite-crew-button";
 import {
   CREW_PROGRESS_STATUS_LABELS,
   type CrewBoardMember,
+  type CrewJoinRequest,
   type CrewSummary,
 } from "@/features/crews/types";
-
-export function CrewSwitcher({
-  crews,
-  selectedCrewId,
-}: {
-  crews: CrewSummary[];
-  selectedCrewId: string;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {crews.map((crew) => {
-        const selected = crew.id === selectedCrewId;
-        return (
-          <Link
-            key={crew.id}
-            href={`/crews?crew=${crew.id}`}
-            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              selected
-                ? "bg-pine-800 text-fog-50"
-                : "border-line text-pine-800 border bg-white hover:border-pine-300"
-            }`}
-          >
-            {crew.name}
-          </Link>
-        );
-      })}
-    </div>
-  );
-}
 
 export function CrewBoard({
   crew,
   weekStart,
   members,
   isOwner,
+  joinRequests = [],
 }: {
   crew: CrewSummary;
   weekStart: string;
   members: CrewBoardMember[];
   isOwner: boolean;
+  joinRequests?: CrewJoinRequest[];
 }) {
   const groups: Array<{
     status: CrewBoardMember["status"];
@@ -66,18 +41,24 @@ export function CrewBoard({
   return (
     <section className="flex flex-col gap-6">
       <div>
-        <h1 className="text-pine-900 text-2xl font-semibold">{crew.name}</h1>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-pine-900 text-2xl font-semibold">{crew.name}</h1>
+            <p className="text-muted mt-2 text-xs font-medium">
+              {crew.isPublic ? "공개 크루" : "비공개 크루"}
+            </p>
+          </div>
+          <InviteCrewButton inviteCode={crew.inviteCode} />
+        </div>
         {crew.description ? (
-          <p className="text-muted mt-2 text-sm leading-6">{crew.description}</p>
+          <p className="text-muted mt-3 text-sm leading-6">{crew.description}</p>
         ) : null}
         <p className="text-muted mt-3 text-sm">
           이번 주 ({weekStart}~) · 멤버 {crew.memberCount}명
         </p>
-        <p className="text-pine-800 mt-2 text-sm">
-          초대 코드{" "}
-          <span className="font-semibold tracking-wider">{crew.inviteCode}</span>
-        </p>
       </div>
+
+      {isOwner ? <CrewJoinRequestsPanel requests={joinRequests} /> : null}
 
       {groups.map((group) =>
         group.items.length === 0 ? null : (
@@ -102,7 +83,7 @@ export function CrewBoard({
                         ) : null}
                         {member.role === "OWNER" ? (
                           <span className="text-pine-600 ml-2 text-xs font-medium">
-                            소유자
+                            리더
                           </span>
                         ) : null}
                       </p>
@@ -131,7 +112,11 @@ export function CrewBoard({
         ),
       )}
 
-      <LeaveCrewButton crewId={crew.id} />
+      <LeaveCrewButton
+        crewId={crew.id}
+        isOwner={isOwner}
+        memberCount={crew.memberCount}
+      />
     </section>
   );
 }
