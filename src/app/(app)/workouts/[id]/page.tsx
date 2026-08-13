@@ -12,6 +12,10 @@ import {
   formatLocalDateTimeLabel,
   goalStatusLabel,
 } from "@/features/workouts/format";
+import {
+  formatConditionScore,
+  formatPerceivedExertion,
+} from "@/features/workouts/labels";
 import { formatLocalDate } from "@/lib/dates/week";
 import { createClient } from "@/lib/supabase/server";
 
@@ -149,13 +153,13 @@ export default async function WorkoutDetailPage({
         <div>
           <dt className="text-muted">스스로 느낀 강도</dt>
           <dd className="text-pine-900 mt-1 font-medium">
-            {workout.perceived_exertion} / 5
+            {formatPerceivedExertion(workout.perceived_exertion)}
           </dd>
         </div>
         <div>
           <dt className="text-muted">컨디션</dt>
           <dd className="text-pine-900 mt-1 font-medium">
-            {workout.condition_score} / 5
+            {formatConditionScore(workout.condition_score)}
           </dd>
         </div>
         <div>

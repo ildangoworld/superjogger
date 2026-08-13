@@ -1,6 +1,10 @@
 import { addDaysToLocalDate, getWeekStartDate } from "@/lib/dates/week";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import {
+  formatConditionScore,
+  formatPerceivedExertion,
+} from "@/features/workouts/labels";
 
 type Supabase = SupabaseClient<Database>;
 
@@ -20,6 +24,104 @@ export type AnalysisContext = {
   };
   previousTrendSummary: string | null;
 };
+
+type WorkoutRow = {
+  id: string;
+  category: string;
+  started_at?: string;
+  local_date: string;
+  duration_seconds: number;
+  distance_meters: number;
+  perceived_exertion: number;
+  condition_score: number;
+  has_pain: boolean;
+  pain_area: string | null;
+  pain_details?: string | null;
+  average_heart_rate: number | null;
+  cadence: number | null;
+  step_count?: number | null;
+  memo?: string | null;
+  qualifies_by_rule: boolean;
+  counts_for_daily_goal: boolean;
+};
+
+type SummaryRow = {
+  week_start: string;
+  goal_count: number | null;
+  qualified_day_count: number;
+  goal_achieved: boolean;
+  workout_count: number;
+  total_duration_seconds: number;
+  total_distance_meters: number;
+  category_counts: unknown;
+  average_exertion: number | null;
+  average_condition: number | null;
+  pain_record_count: number;
+};
+
+function presentWorkoutForAnalysis(workout: WorkoutRow): Record<string, unknown> {
+  return {
+    id: workout.id,
+    category: workout.category,
+    localDate: workout.local_date,
+    ...(workout.started_at != null ? { startedAt: workout.started_at } : {}),
+    durationSeconds: workout.duration_seconds,
+    distanceMeters: workout.distance_meters,
+    perceivedExertion: formatPerceivedExertion(workout.perceived_exertion),
+    condition: formatConditionScore(workout.condition_score),
+    hasPain: workout.has_pain,
+    painArea: workout.pain_area,
+    ...(workout.pain_details !== undefined
+      ? { painDetails: workout.pain_details }
+      : {}),
+    averageHeartRate: workout.average_heart_rate,
+    cadence: workout.cadence,
+    ...(workout.step_count !== undefined
+      ? { stepCount: workout.step_count }
+      : {}),
+    ...(workout.memo !== undefined ? { memo: workout.memo } : {}),
+    qualifiesByRule: workout.qualifies_by_rule,
+    countsForDailyGoal: workout.counts_for_daily_goal,
+  };
+}
+
+function presentSummaryForAnalysis(
+  summary: SummaryRow,
+): Record<string, unknown> {
+  const {
+    week_start,
+    goal_count,
+    qualified_day_count,
+    goal_achieved,
+    workout_count,
+    total_duration_seconds,
+    total_distance_meters,
+    category_counts,
+    average_exertion,
+    average_condition,
+    pain_record_count,
+  } = summary;
+
+  return {
+    weekStart: week_start,
+    goalCount: goal_count,
+    qualifiedDayCount: qualified_day_count,
+    goalAchieved: goal_achieved,
+    workoutCount: workout_count,
+    totalDurationSeconds: total_duration_seconds,
+    totalDistanceMeters: total_distance_meters,
+    categoryCounts: category_counts,
+    averagePerceivedExertion:
+      average_exertion == null
+        ? null
+        : formatPerceivedExertion(average_exertion),
+    averageCondition:
+      average_condition == null
+        ? null
+        : formatConditionScore(average_condition),
+    painRecordCount: pain_record_count,
+  };
+}
 
 export async function buildAnalysisContext(
   supabase: Supabase,
@@ -123,13 +225,9 @@ export async function buildAnalysisContext(
 
   return {
     recommendationDetail: profile.recommendation_detail,
-    currentWorkout: {
-      ...workout,
-      qualifiesByRule: workout.qualifies_by_rule,
-      countsForDailyGoal: workout.counts_for_daily_goal,
-    },
-    recentWorkouts: recentWorkouts ?? [],
-    recentFourWeekSummaries: summaries ?? [],
+    currentWorkout: presentWorkoutForAnalysis(workout),
+    recentWorkouts: (recentWorkouts ?? []).map(presentWorkoutForAnalysis),
+    recentFourWeekSummaries: (summaries ?? []).map(presentSummaryForAnalysis),
     recentPainSummary: {
       painRecordCount: painRows?.length ?? 0,
       areas,

@@ -12,6 +12,7 @@ import type {
   PrimaryGoal,
 } from "@/features/goals/recommend";
 import type { RecommendationDetail } from "@/features/auth/types";
+import { CONDITION_OPTIONS } from "@/features/workouts/labels";
 
 const WEEKDAYS: { value: number; label: string }[] = [
   { value: 1, label: "월" },
@@ -241,20 +242,40 @@ export function OnboardingForm({ initialNickname }: Props) {
 
       {step === 2 && (
         <div className="flex flex-col gap-5">
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="text-pine-900 font-medium">
-              현재 컨디션 (1~5)
-            </span>
-            <input
-              type="range"
-              min={1}
-              max={5}
-              value={conditionScore}
-              onChange={(event) => setConditionScore(Number(event.target.value))}
-              className="accent-pine-700"
-            />
-            <span className="text-muted">{conditionScore}점</span>
-          </label>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-pine-900 text-sm font-medium">
+              현재 컨디션
+            </legend>
+            <div className="grid grid-cols-5 gap-1.5">
+              {CONDITION_OPTIONS.map((option) => {
+                const selected = conditionScore === option.value;
+                return (
+                  <label
+                    key={option.value}
+                    className={`flex min-h-14 cursor-pointer items-center justify-center rounded-lg px-1 py-1.5 text-center text-sm font-medium transition-colors ${
+                      selected
+                        ? "bg-pine-800 text-fog-50"
+                        : "border-line text-pine-800 border bg-transparent"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="conditionScoreChoice"
+                      value={option.value}
+                      checked={selected}
+                      onChange={() => setConditionScore(option.value)}
+                      className="sr-only"
+                    />
+                    <span className="flex flex-col items-center gap-0.5 leading-tight">
+                      {option.label.split(/\s+/).map((part) => (
+                        <span key={part}>{part}</span>
+                      ))}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
           <fieldset className="flex flex-col gap-2">
             <legend className="text-pine-900 text-sm font-medium">
               통증 여부

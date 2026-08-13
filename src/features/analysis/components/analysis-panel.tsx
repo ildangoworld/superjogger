@@ -81,7 +81,7 @@ export function AnalysisPanel({
             <dd className="text-pine-900 mt-1 leading-6">{analysis.summary}</dd>
           </div>
           <div>
-            <dt className="text-muted">느낀 강도</dt>
+            <dt className="text-muted">스스로 느낀 강도</dt>
             <dd className="text-pine-900 mt-1 leading-6">
               {analysis.intensityInterpretation}
             </dd>

@@ -21,6 +21,10 @@ import {
   secondsToDurationParts,
   stepCountFromCadence,
 } from "@/features/workouts/qualification";
+import {
+  CONDITION_OPTIONS,
+  PERCEIVED_EXERTION_OPTIONS,
+} from "@/features/workouts/labels";
 
 type Props = {
   mode: "create" | "edit";
@@ -46,22 +50,6 @@ const DISTANCE_WHOLE_VALUES = Array.from(
   (_, index) => index,
 );
 const DECIMAL_DIGIT_VALUES = Array.from({ length: 10 }, (_, index) => index);
-
-const PERCEIVED_EXERTION_OPTIONS = [
-  { value: 1, label: "아주 쉬움" },
-  { value: 2, label: "쉬움" },
-  { value: 3, label: "보통" },
-  { value: 4, label: "힘듦" },
-  { value: 5, label: "아주 힘듦" },
-] as const;
-
-const CONDITION_OPTIONS = [
-  { value: 5, label: "매우 좋음" },
-  { value: 4, label: "좋음" },
-  { value: 3, label: "보통" },
-  { value: 2, label: "나쁨" },
-  { value: 1, label: "아주 나쁨" },
-] as const;
 
 function roundDistanceKm(value: number): number {
   return Math.min(

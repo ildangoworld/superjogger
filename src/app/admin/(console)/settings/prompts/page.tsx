@@ -19,7 +19,8 @@ export default async function AdminAiPromptSettingsPage() {
         </Link>
         <h2 className="text-pine-900 mt-3 text-xl font-semibold">AI 프롬프트</h2>
         <p className="text-muted mt-2 text-sm">
-          운동 분석 GPT 요청에 쓰는 시스템·사용자 프롬프트를 관리해요.
+          운동 분석 GPT 요청에 쓰는 시스템·사용자 프롬프트를 관리해요. 강도·컨디션은
+          한글 표현 기준으로 맞춰 주세요.
         </p>
       </div>
       <AdminAiPromptSettingsForm settings={settings} />

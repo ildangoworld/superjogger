@@ -25,7 +25,8 @@ export function AdminAiPromptSettingsForm({
         운동 분석 요청에 사용하는 프롬프트예요. 시스템 프롬프트에{" "}
         <code className="text-pine-800">{DETAIL_RULE_PLACEHOLDER}</code>를
         넣으면 회원 추천 상세도에 맞는 규칙으로 치환돼요. 비어 있으면 기본
-        프롬프트가 사용돼요.
+        프롬프트가 사용돼요. 스스로 느낀 강도·컨디션은 숫자 점수 대신 한글
+        표현(예: 아주 쉬움, 보통, 매우 좋음)으로 다루도록 유지해 주세요.
       </p>
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="text-pine-900 font-medium">시스템 프롬프트</span>

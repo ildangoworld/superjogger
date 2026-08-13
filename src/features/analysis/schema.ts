@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { WorkoutAnalysisResult } from "@/features/analysis/types";
 
-export const PROMPT_VERSION = "v2";
+export const PROMPT_VERSION = "v3";
 
 export const DAILY_ANALYSIS_LIMIT = 3;
 

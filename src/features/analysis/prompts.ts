@@ -16,18 +16,23 @@ export const DEFAULT_AI_PROMPTS: AiPromptConfig = {
     "알 수 없는 의도를 추측해 단정하지 마세요.",
     "사실(기록)과 해석·제안을 구분하는 톤으로 한국어로 답하세요.",
     "전문 용어(RPE, 자각 강도 등) 대신 '스스로 느낀 강도', '운동이 얼마나 힘들었는지'처럼 쉬운 말로 쓰세요. 꼭 필요한 용어는 바로 이어서 짧게 풀어 쓰세요.",
-    "perceived_exertion은 '스스로 느낀 강도'로 부르세요.",
-    "average_heart_rate(평균 심박수)나 cadence(케이던스)가 있으면 intensityInterpretation과 nextWorkoutSuggestion에 반드시 반영하고, 결과 문장에서 그 수치를 읽어 주세요. 값이 없으면 억지로 추측하지 마세요.",
+    "스스로 느낀 강도(perceivedExertion)는 '아주 쉬움', '쉬움', '보통', '힘듦', '아주 힘듦' 중 하나로만 다루고, 1~5 점수·등급 숫자로 말하지 마세요.",
+    "컨디션(condition)은 '아주 나쁨', '나쁨', '보통', '좋음', '매우 좋음' 중 하나로만 다루고, 점수로 말하지 마세요.",
+    "주간 평균 강도·컨디션(averagePerceivedExertion, averageCondition)도 같은 한글 표현으로만 언급하세요.",
+    "averageHeartRate(평균 심박수)나 cadence(케이던스)가 있으면 intensityInterpretation과 nextWorkoutSuggestion에 반드시 반영하고, 결과 문장에서 그 수치를 읽어 주세요. 값이 없으면 억지로 추측하지 마세요.",
     DETAIL_RULE_PLACEHOLDER,
     "반드시 지정된 JSON 객체만 반환하세요. 추가 키나 마크다운을 넣지 마세요.",
     "필드: summary, intensityInterpretation, trend, nextWorkoutSuggestion, safetyNotice(없으면 null), trendSummaryForNextAnalysis, riskLevel(NONE|CAUTION|HIGH).",
   ].join(" "),
   detailRuleDetailed:
-    "nextWorkoutSuggestion에는 권장 시간·강도·주의사항을 구체적으로 적으세요.",
+    "nextWorkoutSuggestion에는 권장 시간·강도(한글 표현)·주의사항을 구체적으로 적으세요. 강도는 '편안한 보통 강도', '아주 쉬운 강도'처럼 한글 표현으로 쓰세요.",
   detailRuleLight:
-    "nextWorkoutSuggestion에는 다음 운동의 방향만 짧게 제안하세요.",
-  userInstruction:
-    "아래 구조화 컨텍스트만으로 이번 운동을 분석하세요. 원본 집계 수치를 AI 이전 요약보다 우선하세요.",
+    "nextWorkoutSuggestion에는 다음 운동의 방향만 짧게 제안하세요. 강도는 한글 표현으로만 적으세요.",
+  userInstruction: [
+    "아래 구조화 컨텍스트만으로 이번 운동을 분석하세요.",
+    "원본 집계 수치를 AI 이전 요약보다 우선하세요.",
+    "스스로 느낀 강도와 컨디션은 컨텍스트에 담긴 한글 표현을 그대로 읽고, 답변에도 숫자 점수 없이 자연스러운 한글 표현으로만 쓰세요.",
+  ].join(" "),
 };
 
 function promptSettingString(value: unknown): string {

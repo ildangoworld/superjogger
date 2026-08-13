@@ -1,3 +1,5 @@
+import { formatConditionScore } from "@/features/workouts/labels";
+
 export type ExperienceLevel =
   | "BEGINNER"
   | "RETURNING"
@@ -50,7 +52,9 @@ export function recommendWeeklyTarget(
     reasons.push("통증이 있어 목표를 한 단계 낮췄어요. 몸이 우선이에요.");
   } else if (input.conditionScore <= 2) {
     target = Math.max(1, target - 1);
-    reasons.push("현재 컨디션이 낮아 목표를 조금 낮췄어요.");
+    reasons.push(
+      `현재 컨디션이 '${formatConditionScore(input.conditionScore)}'이라 목표를 조금 낮췄어요.`,
+    );
   }
 
   const available = input.availableWeekdays.length;
